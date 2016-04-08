@@ -1,6 +1,5 @@
 
 
-declare function format(s: string, args: any[]) : string;
 
 function start() {
     var c = <HTMLCanvasElement>document.getElementById("canvas");
@@ -81,6 +80,22 @@ namespace deltav {
         constructor(public width: number, public height: number) {
             this.south = height;
             this.east = width;
+        }
+        
+        public update(time : number, input: Input) {
+            for (var i = 0; i < this.things.length; i++) {
+                this.things[i].update(time, this, input);
+            }
+        }
+
+        public render(ctx: CanvasRenderingContext2D) {
+            ctx.fillStyle = "aliceblue";
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.fill();
+
+             for (var i = 0; i < this.things.length; i++) {
+                this.things[i].render(ctx);
+             }
         }
     }
     
@@ -272,17 +287,10 @@ namespace deltav {
         
         private updateWorld(time : number) {
             this.clock += time;
-            
-            for (var i = 0; i < this.world.things.length; i++) {
-                this.world.things[i].update(time, this.world, this.input);
-            }
+            this.world.update(time, this.input);            
         }
         
         private renderWorld() {
-            this.ctx.fillStyle = "aliceblue";
-            this.ctx.fillRect(0, 0, this.world.width, this.world.height);
-            this.ctx.fill();
-
             this.ctx.strokeStyle = 'gray';
             this.ctx.strokeRect(0, 0, this.world.width, this.world.height);
             this.ctx.stroke();
@@ -290,10 +298,8 @@ namespace deltav {
             this.ctx.strokeStyle = 'black';
             this.ctx.strokeText(this.clock.toFixed(1).toString(), 20, 20);
             this.ctx.stroke();
-
-             for (var i = 0; i < this.world.things.length; i++) {
-                this.world.things[i].render(this.ctx);
-             }
+            
+            this.world.render(this.ctx);
         }
         
     }

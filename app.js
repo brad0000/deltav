@@ -72,6 +72,19 @@ var deltav;
             this.south = height;
             this.east = width;
         }
+        World.prototype.update = function (time, input) {
+            for (var i = 0; i < this.things.length; i++) {
+                this.things[i].update(time, this, input);
+            }
+        };
+        World.prototype.render = function (ctx) {
+            ctx.fillStyle = "aliceblue";
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.fill();
+            for (var i = 0; i < this.things.length; i++) {
+                this.things[i].render(ctx);
+            }
+        };
         return World;
     })();
     deltav.World = World;
@@ -229,23 +242,16 @@ var deltav;
         };
         client.prototype.updateWorld = function (time) {
             this.clock += time;
-            for (var i = 0; i < this.world.things.length; i++) {
-                this.world.things[i].update(time, this.world, this.input);
-            }
+            this.world.update(time, this.input);
         };
         client.prototype.renderWorld = function () {
-            this.ctx.fillStyle = "aliceblue";
-            this.ctx.fillRect(0, 0, this.world.width, this.world.height);
-            this.ctx.fill();
             this.ctx.strokeStyle = 'gray';
             this.ctx.strokeRect(0, 0, this.world.width, this.world.height);
             this.ctx.stroke();
             this.ctx.strokeStyle = 'black';
             this.ctx.strokeText(this.clock.toFixed(1).toString(), 20, 20);
             this.ctx.stroke();
-            for (var i = 0; i < this.world.things.length; i++) {
-                this.world.things[i].render(this.ctx);
-            }
+            this.world.render(this.ctx);
         };
         return client;
     })();
