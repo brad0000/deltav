@@ -20,6 +20,7 @@ namespace deltav {
         Brake = 40,
         Clockwise = 39,
         AntiClockwise = 37,
+        Fire = 17,
     } 
     
     /*
@@ -75,30 +76,102 @@ namespace deltav {
         // drag acts against the velocity of the object in a small amount
         public drag = -0.9;
         
+        public things = new Array<Thing>();
+        
         constructor(public width: number, public height: number) {
             this.south = height;
             this.east = width;
         }
     }
     
-    export class Ship {
-        
-        private velocity = Vector.Zero(2);
-        private position = Vector.Zero(2);
-        private acceleration = Vector.Zero(2);
-        private heading = 0;
-        private mass = 3;
-        private power = 5000;
-        private angularPower = 5000;
-        
-        constructor(private logger: Logger, x: number, y: number) {
+    
+    export class Thing {
+        protected velocity = Vector.Zero(2);
+        protected position = Vector.Zero(2);
+        protected acceleration = Vector.Zero(2);
+        protected mass = 30;
+
+        constructor(public logger: Logger, x: number, y: number) {
             this.position = Vector.create([x, y]);
+        }
+
+        public update(time: number, world : World, input: Input) {
+            this.position = this.position.add(this.velocity.multiply(time));
+            this.velocity = this.velocity.add(this.acceleration.multiply(time));
+        }
+        
+        public render(ctx: CanvasRenderingContext2D) {
+        }        
+        
+        public getX() { 
+            return this.position.e(1); 
+        }
+        
+        public getY() { 
+            return this.position.e(2); 
+        }
+        
+        public getV() {
+            return this.velocity.dup();
+        }
+    }
+    
+    export class Bullet extends Thing {
+        constructor(ship: Ship, x: number, y: number, velocity: Vector) {
+            super(ship.logger, x, y);
+            this.velocity = velocity;
+            this.mass = 2;
+        }
+
+        public update(time: number, world : World, input: Input) {
+            super.update(time, world, input);
+        }
+        
+        public render(ctx: CanvasRenderingContext2D) {
+            ctx.strokeStyle = "black";
+            ctx.beginPath();
+            ctx.arc(this.position.e(1), this.position.e(2), this.mass, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+    
+    export class Weapon {
+        private velocity = 1000;
+        
+        constructor(private ship : Ship) {
+            
+        }
+        
+        public fire(world : World, position: Vector, velocity: Vector, mass: number) {
+            var endOfLine = position.add(velocity.toUnitVector().multiply(mass * 2));
+            world.things.push(
+                new Bullet(
+                    this.ship,
+                    endOfLine.e(1),
+                    endOfLine.e(2),
+                    this.ship.getV().toUnitVector().multiply(this.velocity)));
+        }
+    }
+    
+    export class Ship extends Thing {
+        
+        private heading = 0;
+        private power = 1000;
+        private angularPower = 2000;
+        private weapon : Weapon;
+        
+        constructor(logger: Logger, x: number, y: number) {
+            super(logger, x, y);
+            this.weapon = new Weapon(this);
         }
         
         public update(time: number, world : World, input: Input) {
-            
-            this.position = this.position.add(this.velocity.multiply(time));
-            this.velocity = this.velocity.add(this.acceleration.multiply(time));
+
+            if (input.isDown(CtlKey.Fire)) {
+                this.weapon.fire(world, this.position, this.velocity, this.mass);
+            }
+
+            super.update(time, world, input);            
 
             // calc net forces
             var force = Vector.Zero(2);
@@ -154,14 +227,6 @@ namespace deltav {
             }
         }
         
-        public getX() { 
-            return this.position.e(1); 
-        }
-        
-        public getY() { 
-            return this.position.e(2); 
-        }
-
         public report() : string {
             return 'p ' + this.fv(this.position) 
                 + ' v ' + this.fv(this.velocity)
@@ -179,7 +244,6 @@ namespace deltav {
         private ctx : CanvasRenderingContext2D;
         private world : World;
         private clock = 0;
-        private ship : Ship = null;
         private logger : Logger;
         private input : Input;
         
@@ -194,7 +258,7 @@ namespace deltav {
 
             this.ctx = canvas.getContext("2d");
             
-            this.ship = new Ship(this.logger, 100, 100);
+            this.world.things.push(new Ship(this.logger, 100, 100));
             
             this.startGameLoop();
         }
@@ -208,11 +272,9 @@ namespace deltav {
         
         private updateWorld(time : number) {
             this.clock += time;
-            this.ship.update(time, this.world, this.input);
             
-            if (this.input.lastClick != null) {
-                this.ship = new Ship(this.logger, this.input.lastClick.layerX, this.input.lastClick.layerY);
-                this.input.lastClick = null;
+            for (var i = 0; i < this.world.things.length; i++) {
+                this.world.things[i].update(time, this.world, this.input);
             }
         }
         
@@ -229,7 +291,9 @@ namespace deltav {
             this.ctx.strokeText(this.clock.toFixed(1).toString(), 20, 20);
             this.ctx.stroke();
 
-            this.ship.render(this.ctx);
+             for (var i = 0; i < this.world.things.length; i++) {
+                this.world.things[i].render(this.ctx);
+             }
         }
         
     }
