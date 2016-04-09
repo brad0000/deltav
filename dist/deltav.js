@@ -1299,6 +1299,7 @@ var deltav;
 (function (deltav) {
     class Body {
         constructor(logger, x, y) {
+            this.isDead = false;
             this.mass = 5;
             this.position = Vector.Zero(2);
             this.velocity = Vector.Zero(2);
@@ -1335,6 +1336,57 @@ var deltav;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=Body.js.map
+
+var deltav;
+(function (deltav) {
+    class Star extends deltav.Body {
+        constructor(logger, x, y, radius) {
+            super(logger, x, y);
+            this.radius = radius;
+        }
+        update(time, world, input) {
+        }
+        render(ctx) {
+            ctx.beginPath();
+            ctx.fillStyle = "white";
+            ctx.arc(this.getX(), this.getY(), this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    deltav.Star = Star;
+})(deltav || (deltav = {}));
+
+//# sourceMappingURL=Star.js.map
+
+var deltav;
+(function (deltav) {
+    class Smoke extends deltav.Body {
+        constructor(ship, x, y, velocity) {
+            super(ship.logger, x, y);
+            this.radius = 1;
+            this.opacity = 1;
+            this.velocity = velocity;
+            this.brush = "white";
+        }
+        update(time, world, input) {
+            super.update(time, world, input);
+            this.radius += 0.1;
+            this.opacity -= 0.1;
+            if (this.opacity < 0) {
+                this.isDead = true;
+            }
+        }
+        render(ctx) {
+            ctx.beginPath();
+            ctx.fillStyle = "rgba(255, 255, 255, " + this.opacity.toString() + ")";
+            ctx.arc(this.getX(), this.getY(), this.radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    deltav.Smoke = Smoke;
+})(deltav || (deltav = {}));
+
+//# sourceMappingURL=Smoke.js.map
 
 var deltav;
 (function (deltav) {
@@ -1469,6 +1521,8 @@ var deltav;
                     this.velocity.setElements([0, -0.1]);
                 }
                 force = force.add(this.velocity.toUnitVector().multiply(this.power));
+                let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
+                world.bodies.push(new deltav.Smoke(this, exhaust.e(1), exhaust.e(2), this.velocity.multiply(-1)));
             }
             else if (input.isDown(deltav.CtlKey.Brake)) {
                 force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
@@ -1535,7 +1589,7 @@ var deltav;
             }
         }
         fire(world, position, velocity, mass) {
-            let barrel = position;
+            let barrel = position.add(velocity.toUnitVector().multiply(15));
             let shipV = this.ship.getV();
             world.bodies.push(new Bullet(this.ship, barrel.e(1), barrel.e(2), shipV.add(shipV.toUnitVector().multiply(this.velocity))));
             this.countdown = this.reloadTime;
@@ -1549,11 +1603,16 @@ var deltav;
             this.mass = 2;
             this.brush = "orange";
             this.heading = ship.getH();
-            this.geometry.push(Vector.create([-5, -2.5]));
-            this.geometry.push(Vector.create([4, -2.5]));
-            this.geometry.push(Vector.create([6.25, 0]));
-            this.geometry.push(Vector.create([4, 2.5]));
-            this.geometry.push(Vector.create([-5, 2.5]));
+            this.geometry = [
+                Vector.create([-5, -2.5]),
+                Vector.create([4, -2.5]),
+                Vector.create([6.25, 0]),
+                Vector.create([4, 2.5]),
+                Vector.create([-5, 2.5]),
+            ];
+            for (let i = 0; i < this.geometry.length; i++) {
+                this.geometry[i] = this.geometry[i].multiply(0.75);
+            }
         }
         update(time, world, input) {
             super.update(time, world, input);
@@ -1611,16 +1670,35 @@ var deltav;
             this.west = 0;
             this.drag = -0.9;
             this.bodies = new Array();
+            this.gcCountdown = 10;
             this.south = height;
             this.east = width;
-            this.bodies.push(new deltav.Ship(this.logger, 400, 500));
+            for (let i = 0; i < 500; i++) {
+                this.bodies.push(new deltav.Star(this.logger, Math.random() * this.width, Math.random() * this.height, Math.random() * 1.5));
+            }
             for (let i = 0; i < 50; i++) {
                 this.bodies.push(new deltav.Asteroid(this.logger, Math.random() * this.width, Math.random() * this.height, Math.random() * 30));
             }
+            this.bodies.push(new deltav.Ship(this.logger, 400, 500));
         }
         update(time, input) {
-            for (let i = 0; i < this.bodies.length; i++) {
-                this.bodies[i].update(time, this, input);
+            this.gcCountdown -= time;
+            if (this.gcCountdown < 0) {
+                let old = this.bodies;
+                this.bodies = [];
+                for (let i = 0; i < old.length; i++) {
+                    if (!old[i].isDead) {
+                        old[i].update(time, this, input);
+                        this.bodies.push(old[i]);
+                    }
+                }
+            }
+            else {
+                for (let i = 0; i < this.bodies.length; i++) {
+                    if (!this.bodies[i].isDead) {
+                        this.bodies[i].update(time, this, input);
+                    }
+                }
             }
         }
         render(ctx) {
@@ -1628,7 +1706,9 @@ var deltav;
             ctx.fillRect(0, 0, this.width, this.height);
             ctx.fill();
             for (let i = 0; i < this.bodies.length; i++) {
-                this.bodies[i].render(ctx);
+                if (!this.bodies[i].isDead) {
+                    this.bodies[i].render(ctx);
+                }
             }
         }
     }

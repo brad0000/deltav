@@ -2,6 +2,7 @@ var deltav;
 (function (deltav) {
     class Body {
         constructor(logger, x, y) {
+            this.isDead = false;
             this.mass = 5;
             this.position = Vector.Zero(2);
             this.velocity = Vector.Zero(2);

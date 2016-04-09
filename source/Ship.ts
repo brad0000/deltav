@@ -61,6 +61,11 @@ namespace deltav {
                     this.velocity.setElements([0, -0.1]);
                 }
                 force = force.add(this.velocity.toUnitVector().multiply(this.power));
+
+                let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
+                world.bodies.push(
+                    new Smoke(this, exhaust.e(1), exhaust.e(2), this.velocity.multiply(-1)));
+
             } else if (input.isDown(CtlKey.Brake)) {
                 force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
             }
@@ -77,6 +82,11 @@ namespace deltav {
                     .multiply(this.angularPower)
                     .multiply(time);
                 this.acceleration = this.acceleration.add(rotation);
+
+                // let rad = Math.PI / 2 * (veerRight ? -1 : 1);
+                // let exhaust = this.position.add(Vector.create([4, 0]).rotate(this.heading, this.position));
+                // world.bodies.push(
+                //     new Smoke(this, exhaust.e(1), exhaust.e(2), this.velocity.rotate(rad, this.velocity)));
             }
         }
 
@@ -137,7 +147,7 @@ namespace deltav {
         }
 
         public fire(world: World, position: Vector, velocity: Vector, mass: number) {
-            let barrel = position; // .add(Vector.create([4, 0]).multiply(5).rotate(this.ship.getH(), position));
+            let barrel = position.add(velocity.toUnitVector().multiply(15));
             let shipV = this.ship.getV();
             world.bodies.push(
                 new Bullet(
@@ -157,11 +167,18 @@ namespace deltav {
             this.brush = "orange";
             this.heading = ship.getH();
 
-            this.geometry.push(Vector.create([-5, -2.5]));
-            this.geometry.push(Vector.create([4, -2.5]));
-            this.geometry.push(Vector.create([6.25, 0]));
-            this.geometry.push(Vector.create([4, 2.5]));
-            this.geometry.push(Vector.create([-5, 2.5]));
+            this.geometry = [
+                Vector.create([-5, -2.5]),
+                Vector.create([4, -2.5]),
+                Vector.create([6.25, 0]),
+                Vector.create([4, 2.5]),
+                Vector.create([-5, 2.5]),
+            ];
+
+            for (let i = 0; i < this.geometry.length; i++) {
+                this.geometry[i] = this.geometry[i].multiply(0.75);
+            }
+
         }
 
         public update(time: number, world: World, input: Input) {

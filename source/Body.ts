@@ -1,6 +1,7 @@
 namespace deltav {
     export class Body {
         public logger: Logger;
+        public isDead = false;
 
         protected mass = 5;
         protected position = Vector.Zero(2);

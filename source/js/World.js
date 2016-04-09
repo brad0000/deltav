@@ -11,16 +11,35 @@ var deltav;
             this.west = 0;
             this.drag = -0.9;
             this.bodies = new Array();
+            this.gcCountdown = 10;
             this.south = height;
             this.east = width;
-            this.bodies.push(new deltav.Ship(this.logger, 400, 500));
+            for (let i = 0; i < 500; i++) {
+                this.bodies.push(new deltav.Star(this.logger, Math.random() * this.width, Math.random() * this.height, Math.random() * 1.5));
+            }
             for (let i = 0; i < 50; i++) {
                 this.bodies.push(new deltav.Asteroid(this.logger, Math.random() * this.width, Math.random() * this.height, Math.random() * 30));
             }
+            this.bodies.push(new deltav.Ship(this.logger, 400, 500));
         }
         update(time, input) {
-            for (let i = 0; i < this.bodies.length; i++) {
-                this.bodies[i].update(time, this, input);
+            this.gcCountdown -= time;
+            if (this.gcCountdown < 0) {
+                let old = this.bodies;
+                this.bodies = [];
+                for (let i = 0; i < old.length; i++) {
+                    if (!old[i].isDead) {
+                        old[i].update(time, this, input);
+                        this.bodies.push(old[i]);
+                    }
+                }
+            }
+            else {
+                for (let i = 0; i < this.bodies.length; i++) {
+                    if (!this.bodies[i].isDead) {
+                        this.bodies[i].update(time, this, input);
+                    }
+                }
             }
         }
         render(ctx) {
@@ -28,7 +47,9 @@ var deltav;
             ctx.fillRect(0, 0, this.width, this.height);
             ctx.fill();
             for (let i = 0; i < this.bodies.length; i++) {
-                this.bodies[i].render(ctx);
+                if (!this.bodies[i].isDead) {
+                    this.bodies[i].render(ctx);
+                }
             }
         }
     }

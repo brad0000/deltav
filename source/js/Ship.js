@@ -51,6 +51,8 @@ var deltav;
                     this.velocity.setElements([0, -0.1]);
                 }
                 force = force.add(this.velocity.toUnitVector().multiply(this.power));
+                let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
+                world.bodies.push(new deltav.Smoke(this, exhaust.e(1), exhaust.e(2), this.velocity.multiply(-1)));
             }
             else if (input.isDown(deltav.CtlKey.Brake)) {
                 force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
@@ -117,7 +119,7 @@ var deltav;
             }
         }
         fire(world, position, velocity, mass) {
-            let barrel = position;
+            let barrel = position.add(velocity.toUnitVector().multiply(15));
             let shipV = this.ship.getV();
             world.bodies.push(new Bullet(this.ship, barrel.e(1), barrel.e(2), shipV.add(shipV.toUnitVector().multiply(this.velocity))));
             this.countdown = this.reloadTime;
@@ -131,11 +133,16 @@ var deltav;
             this.mass = 2;
             this.brush = "orange";
             this.heading = ship.getH();
-            this.geometry.push(Vector.create([-5, -2.5]));
-            this.geometry.push(Vector.create([4, -2.5]));
-            this.geometry.push(Vector.create([6.25, 0]));
-            this.geometry.push(Vector.create([4, 2.5]));
-            this.geometry.push(Vector.create([-5, 2.5]));
+            this.geometry = [
+                Vector.create([-5, -2.5]),
+                Vector.create([4, -2.5]),
+                Vector.create([6.25, 0]),
+                Vector.create([4, 2.5]),
+                Vector.create([-5, 2.5]),
+            ];
+            for (let i = 0; i < this.geometry.length; i++) {
+                this.geometry[i] = this.geometry[i].multiply(0.75);
+            }
         }
         update(time, world, input) {
             super.update(time, world, input);
