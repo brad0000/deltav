@@ -31,7 +31,7 @@ gulp.task("lint", function() {
 /**
  * Compile TypeScript and include references to library and app .d.ts files.
  */
-gulp.task('compile-ts', ['lint'], function () {
+gulp.task('compile-ts', function () { 
     var sourceTsFiles = [
         config.allTypeScript,               // path to typescript files
         config.libraryTypeScriptDefinitions // reference to library .d.ts files
@@ -67,7 +67,17 @@ gulp.task('clean-ts', function (cb) {
 gulp.task("bundle", ['compile-ts'], function() {
     var outputFolder   = "./dist/";
     
-    return gulp.src('./source/js/*.js') //['file1.js', 'file2.js', 'file3.js'])
+    return gulp.src([
+            './source/libs/sylvester.js',
+            './source/js/thing.js',
+            './source/js/app.js',
+            './source/js/body.js',
+            './source/js/client.js',
+            './source/js/input.js',
+            './source/js/ship.js',
+            './source/js/asteroid.js',
+            './source/js/world.js',
+        ])
         .pipe(concat('deltav.js'))
         //.pipe(gulp.dest(outputFolder))
         //.pipe(rename('uglify.js'))
@@ -98,7 +108,7 @@ gulp.task("bundle", ['compile-ts'], function() {
     //     .pipe(gulp.dest(outputFolder));
 });
 
-gulp.task('default', ['lint', 'compile-ts', 'bundle']);
+gulp.task('default', ['lint', 'bundle']);
 
 // var watcher = gulp.watch('source/**/*.ts', ['lint']);
 // watcher.on('change', function(event) {

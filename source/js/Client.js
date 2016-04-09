@@ -6,10 +6,9 @@ var deltav;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             this.logger = new deltav.Logger(logArea);
-            this.world = new deltav.World(canvas.width, canvas.height);
+            this.world = new deltav.World(this.logger, canvas.width, canvas.height);
             this.input = new deltav.Input(canvas, document);
             this.ctx = canvas.getContext("2d");
-            this.world.things.push(new deltav.Ship(this.logger, 400, 500));
             this.startGameLoop();
         }
         startGameLoop() {

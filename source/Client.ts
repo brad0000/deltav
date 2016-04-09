@@ -15,12 +15,9 @@ namespace deltav {
             canvas.height = window.innerHeight;
 
             this.logger = new Logger(logArea);
-            this.world = new World(canvas.width, canvas.height);
+            this.world = new World(this.logger, canvas.width, canvas.height);
             this.input = new Input(canvas, document);
-
             this.ctx = canvas.getContext("2d");
-
-            this.world.things.push(new Ship(this.logger, 400, 500));
 
             this.startGameLoop();
         }
