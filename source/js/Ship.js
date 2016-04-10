@@ -1,14 +1,14 @@
 var deltav;
 (function (deltav) {
     class Ship extends deltav.Body {
-        constructor(logger, x, y) {
-            super(logger, x, y);
+        constructor(logger, position) {
+            super(logger, position);
             this.power = 5000;
             this.angularPower = 20;
             this.weapon = new deltav.Weapon(this);
             this.brush = "red";
             this.velocity = Vector.create([0, 1]);
-            this.geometry = [
+            let geo = [
                 Vector.create([-2, -3]),
                 Vector.create([0, -3]),
                 Vector.create([1, -1]),
@@ -22,9 +22,10 @@ var deltav;
                 Vector.create([-2, -1]),
                 Vector.create([-1.5, -1]),
             ];
-            for (let i = 0; i < this.geometry.length; i++) {
-                this.geometry[i] = this.geometry[i].multiply(5);
+            for (let i = 0; i < geo.length; i++) {
+                geo[i] = geo[i].multiply(5);
             }
+            this.setGeometry(geo);
         }
         update(time, world, input) {
             super.update(time, world, input);
@@ -55,7 +56,7 @@ var deltav;
                 }
                 force = force.add(this.velocity.toUnitVector().multiply(this.power));
                 let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
-                world.bodies.push(new deltav.Smoke(this, exhaust.e(1), exhaust.e(2), this.velocity.multiply(-1)));
+                world.addStaticBody(new deltav.Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
             }
             else if (input.isDown(deltav.CtlKey.Brake)) {
                 force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
@@ -89,6 +90,9 @@ var deltav;
                 ctx.lineTo(endOfLine.e(1), endOfLine.e(2));
                 ctx.stroke();
             }
+        }
+        recentlyFired(bullet) {
+            return this.weapon.recentlyFired(bullet);
         }
         scaleAngularPower(speed) {
             return this.angularPower * speed;

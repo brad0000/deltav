@@ -1,7 +1,7 @@
 var deltav;
 (function (deltav) {
     class Body {
-        constructor(logger, x, y) {
+        constructor(logger, position) {
             this.isDead = false;
             this.mass = 5;
             this.position = Vector.Zero(2);
@@ -9,7 +9,7 @@ var deltav;
             this.acceleration = Vector.Zero(2);
             this.heading = 0;
             this.geometry = Array();
-            this.position = Vector.create([x, y]);
+            this.position = position;
             this.brush = "black";
             this.rotationSpeed = 0;
         }
@@ -18,6 +18,10 @@ var deltav;
         getP() { return this.position.dup(); }
         getV() { return this.velocity.dup(); }
         getH() { return this.heading; }
+        getBox() {
+            let p = this.position.elements;
+            return new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
+        }
         update(time, world, input) {
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
@@ -34,6 +38,17 @@ var deltav;
             }
             ctx.closePath();
             ctx.fill();
+        }
+        collide(body) {
+            this.isDead = true;
+            body.isDead = true;
+            return new deltav.Wreckage(this.logger, this.position, this.velocity.avg(body.getV()));
+        }
+        setGeometry(geometry) {
+            this.geometry = geometry;
+            let lengths = this.geometry.map((v, i, e) => { return v.modulus(); });
+            this.radius = Math.max(...lengths);
+            this.collisionRadius = this.radius * 0.3;
         }
     }
     deltav.Body = Body;

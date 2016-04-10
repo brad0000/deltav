@@ -19,34 +19,42 @@ var deltav;
         fire(world, position, velocity, mass) {
             let barrel = position.add(velocity.toUnitVector().multiply(15));
             let shipV = this.ship.getV();
-            world.bodies.push(new Bullet(this.ship, barrel.e(1), barrel.e(2), shipV.add(shipV.toUnitVector().multiply(this.velocity))));
+            world.addDynamicBody(new Bullet(this.ship.logger, this, barrel, shipV.add(shipV.toUnitVector().multiply(this.velocity))));
             this.countdown = this.reloadTime;
+        }
+        recentlyFired(bullet) {
+            return bullet.isFrom(this) && this.countdown > 0;
         }
     }
     deltav.Weapon = Weapon;
     class Bullet extends deltav.Body {
-        constructor(ship, x, y, velocity) {
-            super(ship.logger, x, y);
+        constructor(logger, weapon, position, velocity) {
+            super(logger, position);
+            this.weapon = weapon;
             this.velocity = velocity;
             this.mass = 2;
             this.brush = "orange";
-            this.heading = ship.getH();
-            this.geometry = [
+            this.heading = velocity.toAngle();
+            let geo = [
                 Vector.create([-5, -2.5]),
                 Vector.create([4, -2.5]),
                 Vector.create([6.25, 0]),
                 Vector.create([4, 2.5]),
                 Vector.create([-5, 2.5]),
             ];
-            for (let i = 0; i < this.geometry.length; i++) {
-                this.geometry[i] = this.geometry[i].multiply(0.75);
+            for (let i = 0; i < geo.length; i++) {
+                geo[i] = geo[i].multiply(0.75);
             }
+            this.setGeometry(geo);
         }
         update(time, world, input) {
             super.update(time, world, input);
         }
         render(ctx) {
             super.render(ctx);
+        }
+        isFrom(weapon) {
+            return this.weapon === weapon;
         }
     }
     deltav.Bullet = Bullet;

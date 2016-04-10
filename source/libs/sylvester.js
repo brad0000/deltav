@@ -152,6 +152,13 @@ Vector.prototype = {
     return this.map(function(x) { return x/k; });
   },
 
+  // Returns the result of averaging the elements of 2 vectors
+  avg: function(vector) {
+    var V = vector.elements || vector;
+    if (this.elements.length != V.length) { return null; }
+    return this.map(function(x, i) { return (x + V[i-1]) / 2; });
+  },
+
   x: function(k) { return this.multiply(k); },
 
   // Returns the scalar product of the vector with the argument

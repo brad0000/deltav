@@ -2,8 +2,8 @@ namespace deltav {
     export class Drone extends Ship {
         private pilot: AiPilot;
 
-        constructor(logger: Logger, x: number, y: number) {
-            super(logger, x, y);
+        constructor(logger: Logger, position: Vector) {
+            super(logger, position);
             this.pilot = new AiPilot(logger, this);
             this.brush = "blue";
         }

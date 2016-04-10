@@ -1,8 +1,8 @@
 var deltav;
 (function (deltav) {
     class Star extends deltav.Body {
-        constructor(logger, x, y, radius) {
-            super(logger, x, y);
+        constructor(logger, position, radius) {
+            super(logger, position);
             this.radius = radius;
         }
         update(time, world, input) {

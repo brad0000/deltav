@@ -21,25 +21,29 @@ namespace deltav {
         public fire(world: World, position: Vector, velocity: Vector, mass: number) {
             let barrel = position.add(velocity.toUnitVector().multiply(15));
             let shipV = this.ship.getV();
-            world.bodies.push(
+            world.addDynamicBody(
                 new Bullet(
-                    this.ship,
-                    barrel.e(1),
-                    barrel.e(2),
+                    this.ship.logger,
+                    this,
+                    barrel,
                     shipV.add(shipV.toUnitVector().multiply(this.velocity))));
             this.countdown = this.reloadTime;
+        }
+
+        public recentlyFired(bullet: Bullet): boolean {
+            return bullet.isFrom(this) && this.countdown > 0;
         }
     }
 
     export class Bullet extends Body {
-        constructor(ship: Ship, x: number, y: number, velocity: Vector) {
-            super(ship.logger, x, y);
+        constructor(logger: Logger, private weapon: Weapon, position: Vector, velocity: Vector) {
+            super(logger, position);
             this.velocity = velocity;
             this.mass = 2;
             this.brush = "orange";
-            this.heading = ship.getH();
+            this.heading = velocity.toAngle();
 
-            this.geometry = [
+            let geo = [
                 Vector.create([-5, -2.5]),
                 Vector.create([4, -2.5]),
                 Vector.create([6.25, 0]),
@@ -47,10 +51,11 @@ namespace deltav {
                 Vector.create([-5, 2.5]),
             ];
 
-            for (let i = 0; i < this.geometry.length; i++) {
-                this.geometry[i] = this.geometry[i].multiply(0.75);
+            for (let i = 0; i < geo.length; i++) {
+                geo[i] = geo[i].multiply(0.75);
             }
 
+            this.setGeometry(geo);
         }
 
         public update(time: number, world: World, input: Input) {
@@ -59,6 +64,10 @@ namespace deltav {
 
         public render(ctx: CanvasRenderingContext2D) {
             super.render(ctx);
+        }
+
+        public isFrom(weapon: Weapon) {
+            return this.weapon === weapon;
         }
     }
 }

@@ -1,8 +1,8 @@
 var deltav;
 (function (deltav) {
     class Drone extends deltav.Ship {
-        constructor(logger, x, y) {
-            super(logger, x, y);
+        constructor(logger, position) {
+            super(logger, position);
             this.pilot = new AiPilot(logger, this);
             this.brush = "blue";
         }

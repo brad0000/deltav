@@ -146,6 +146,11 @@ interface Vector {
     eql(vector: Vector|Array<number>): boolean;
 
     /**
+     * Returns the average of two vectors
+     */
+    avg(vector: Vector): Vector;
+
+    /**
      * Returns a copy of the vector.
      */
     dup(): Vector;

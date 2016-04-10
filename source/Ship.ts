@@ -5,15 +5,15 @@ namespace deltav {
         protected angularPower = 20;
         protected weapon: Weapon;
 
-        constructor(logger: Logger, x: number, y: number) {
-            super(logger, x, y);
+        constructor(logger: Logger, position: Vector) {
+            super(logger, position);
 
             this.weapon = new Weapon(this);
             this.brush = "red";
 
             this.velocity = Vector.create([0, 1]);
 
-            this.geometry = [
+            let geo = [
                 Vector.create([-2, -3]), // back of wing
                 Vector.create([0, -3]),
                 Vector.create([1, -1]),
@@ -28,9 +28,11 @@ namespace deltav {
                 Vector.create([-1.5, -1]),
             ];
 
-            for (let i = 0; i < this.geometry.length; i++) {
-                this.geometry[i] = this.geometry[i].multiply(5);
+            for (let i = 0; i < geo.length; i++) {
+                geo[i] = geo[i].multiply(5);
             }
+
+            this.setGeometry(geo);
         }
 
         public update(time: number, world: World, input: IInput) {
@@ -67,8 +69,8 @@ namespace deltav {
                 force = force.add(this.velocity.toUnitVector().multiply(this.power));
 
                 let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
-                world.bodies.push(
-                    new Smoke(this, exhaust.e(1), exhaust.e(2), this.velocity.multiply(-1)));
+                world.addStaticBody(
+                    new Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
 
             } else if (input.isDown(CtlKey.Brake)) {
                 force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
@@ -119,6 +121,10 @@ namespace deltav {
             // ctx.font = "20px Arial";
             // ctx.fillText(this.report(), 20, 40);
             // ctx.fill();
+        }
+
+        public recentlyFired(bullet: Bullet): boolean {
+            return this.weapon.recentlyFired(bullet);
         }
 
         private scaleAngularPower(speed: number): number {

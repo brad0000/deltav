@@ -1,7 +1,8 @@
 namespace deltav {
     export class Star extends Body {
-        constructor(logger: Logger, x: number, y: number, private radius: number) {
-            super(logger, x, y);
+        constructor(logger: Logger, position: Vector, radius: number) {
+            super(logger, position);
+            this.radius = radius;
         }
 
         public update(time: number, world: World, input: Input) {

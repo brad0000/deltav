@@ -9,11 +9,14 @@ namespace deltav {
         protected acceleration = Vector.Zero(2);
         protected rotationSpeed: number;
         protected heading = 0;
-        protected geometry = Array<Vector>();
         protected brush: string;
+        protected radius: number;
+        protected collisionRadius: number;
 
-        constructor(logger: Logger, x: number, y: number) {
-            this.position = Vector.create([x, y]);
+        private geometry = Array<Vector>();
+
+        constructor(logger: Logger, position: Vector) {
+            this.position = position;
             this.brush = "black";
             this.rotationSpeed = 0;
         }
@@ -25,6 +28,15 @@ namespace deltav {
         public getV() { return this.velocity.dup(); }
 
         public getH() { return this.heading; }
+
+        public getBox() {
+            let p = this.position.elements;
+            return new Box(
+                p[1] - this.radius,
+                p[1] + this.radius,
+                p[0] + this.radius,
+                p[0] - this.radius);
+        }
 
         public update(time: number, world: World, input: IInput) {
             this.position = this.position.add(this.velocity.multiply(time));
@@ -47,6 +59,29 @@ namespace deltav {
 
             ctx.closePath();
             ctx.fill();
+
+            // // bounding box
+            // let b = this.getBox();
+            // ctx.beginPath();
+            // ctx.strokeRect(b.west, b.north, b.width, b.height);
+            // ctx.strokeStyle = "yellow";
+            // ctx.stroke();
+        }
+
+        public collide(body: Body): Wreckage {
+            this.isDead = true;
+            body.isDead = true;
+            return new Wreckage(
+                this.logger,
+                this.position,
+                this.velocity.avg(body.getV()));
+        }
+
+        protected setGeometry(geometry: Array<Vector>) {
+            this.geometry = geometry;
+            let lengths = this.geometry.map((v, i, e) => { return v.modulus(); });
+            this.radius = Math.max(...lengths);
+            this.collisionRadius = this.radius * 0.3;
         }
     }
 }
