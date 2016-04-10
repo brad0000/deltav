@@ -1,9 +1,9 @@
 namespace deltav {
     export class Ship extends Body {
 
-        private power = 5000;
-        private angularPower = 2000;
-        private weapon: Weapon;
+        protected power = 5000;
+        protected angularPower = 20;
+        protected weapon: Weapon;
 
         constructor(logger: Logger, x: number, y: number) {
             super(logger, x, y);
@@ -33,10 +33,13 @@ namespace deltav {
             }
         }
 
-        public update(time: number, world: World, input: Input) {
+        public update(time: number, world: World, input: IInput) {
             super.update(time, world, input);
 
-            this.heading = this.velocity.toAngle();
+            let speed = this.velocity.modulus();
+            if (speed > 1) {
+                this.heading = this.velocity.toAngle();
+            }
 
             this.weapon.update(time);
             if (input.isDown(CtlKey.Fire) && this.weapon.ready()) {
@@ -55,6 +58,7 @@ namespace deltav {
             } else if (input.isDown(CtlKey.Right)) {
                 force = force.add(Vector.create([this.power, 0]));
             }
+
             if (input.isDown(CtlKey.Accelerate)) {
                 if (this.velocity.eql(Vector.Zero(2))) {
                     // Allow user to accelerate from standing stop.
@@ -79,7 +83,7 @@ namespace deltav {
                 rotation = this.velocity
                     .rotate(Math.PI / 2 * (veerRight ? 1 : -1), Vector.Zero(2))
                     .toUnitVector()
-                    .multiply(this.angularPower)
+                    .multiply(this.scaleAngularPower(speed))
                     .multiply(time);
                 this.acceleration = this.acceleration.add(rotation);
 
@@ -109,11 +113,16 @@ namespace deltav {
                 ctx.stroke();
             }
 
-            ctx.beginPath();
-            ctx.fillStyle = "white";
-            ctx.font = "20px Arial";
-            ctx.fillText(this.report(), 20, 40);
-            ctx.fill();
+            // logging
+            // ctx.beginPath();
+            // ctx.fillStyle = "white";
+            // ctx.font = "20px Arial";
+            // ctx.fillText(this.report(), 20, 40);
+            // ctx.fill();
+        }
+
+        private scaleAngularPower(speed: number): number {
+            return this.angularPower * speed;
         }
 
         private fh(rad: number): string {
@@ -124,69 +133,6 @@ namespace deltav {
         private fv(v: Vector, dp: number): string {
             let e = v.elements;
             return e[0].toFixed(dp) + ", " + e[1].toFixed(dp);
-        }
-    }
-
-    export class Weapon {
-        private velocity = 100;
-        private reloadTime = .5;
-        private countdown = 0;
-
-        constructor(private ship: Ship) {
-        }
-
-        public ready() {
-            return this.countdown === 0;
-        }
-
-        public update(time: number) {
-            this.countdown -= time;
-            if (this.countdown < 0) {
-                this.countdown = 0;
-            }
-        }
-
-        public fire(world: World, position: Vector, velocity: Vector, mass: number) {
-            let barrel = position.add(velocity.toUnitVector().multiply(15));
-            let shipV = this.ship.getV();
-            world.bodies.push(
-                new Bullet(
-                    this.ship,
-                    barrel.e(1),
-                    barrel.e(2),
-                    shipV.add(shipV.toUnitVector().multiply(this.velocity))));
-            this.countdown = this.reloadTime;
-        }
-    }
-
-    export class Bullet extends Body {
-        constructor(ship: Ship, x: number, y: number, velocity: Vector) {
-            super(ship.logger, x, y);
-            this.velocity = velocity;
-            this.mass = 2;
-            this.brush = "orange";
-            this.heading = ship.getH();
-
-            this.geometry = [
-                Vector.create([-5, -2.5]),
-                Vector.create([4, -2.5]),
-                Vector.create([6.25, 0]),
-                Vector.create([4, 2.5]),
-                Vector.create([-5, 2.5]),
-            ];
-
-            for (let i = 0; i < this.geometry.length; i++) {
-                this.geometry[i] = this.geometry[i].multiply(0.75);
-            }
-
-        }
-
-        public update(time: number, world: World, input: Input) {
-            super.update(time, world, input);
-        }
-
-        public render(ctx: CanvasRenderingContext2D) {
-            super.render(ctx);
         }
     }
 }

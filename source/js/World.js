@@ -20,7 +20,10 @@ var deltav;
             for (let i = 0; i < 50; i++) {
                 this.bodies.push(new deltav.Asteroid(this.logger, Math.random() * this.width, Math.random() * this.height, Math.random() * 30));
             }
-            this.bodies.push(new deltav.Ship(this.logger, 400, 500));
+            this.bodies.push(new deltav.Ship(this.logger, this.width / 2, this.height / 4));
+            for (let i = 0; i < 10; i++) {
+                this.bodies.push(new deltav.Drone(this.logger, Math.random() * this.width, Math.random() * this.height));
+            }
         }
         update(time, input) {
             this.gcCountdown -= time;

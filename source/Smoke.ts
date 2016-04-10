@@ -10,7 +10,7 @@ namespace deltav {
 
         public update(time: number, world: World, input: Input) {
             super.update(time, world, input);
-            this.radius += 0.1;
+            this.radius += 0.5;
             this.opacity -= 0.1;
 
             if (this.opacity < 0) {

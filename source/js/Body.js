@@ -15,6 +15,7 @@ var deltav;
         }
         getX() { return this.position.e(1); }
         getY() { return this.position.e(2); }
+        getP() { return this.position.dup(); }
         getV() { return this.velocity.dup(); }
         getH() { return this.heading; }
         update(time, world, input) {

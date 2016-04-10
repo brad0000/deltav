@@ -7,7 +7,7 @@ namespace deltav {
         private world: World;
         private clock = 0;
         private logger: Logger;
-        private input: Input;
+        private input: IInput;
 
         constructor(canvas: HTMLCanvasElement, logArea: HTMLTextAreaElement) {
 

@@ -14,11 +14,10 @@ namespace deltav {
             let r = 0;
             let iterations = Math.round(4 + Math.random() * radius);
             for (let i = 0; i < iterations; i++) {
-                 r += Math.PI * 2 / iterations;
-                 this.geometry.push(
-                     // this.position.add(
-                         v.rotate(r, Vector.Zero(2))
-                         .multiply(this.radius * (1 + Math.random())));
+                r += Math.PI * 2 / iterations;
+                this.geometry.push(
+                    v.rotate(r, Vector.Zero(2))
+                        .multiply(this.radius * (1 + Math.random())));
             }
         }
 

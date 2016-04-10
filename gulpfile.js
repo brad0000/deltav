@@ -76,7 +76,9 @@ gulp.task("bundle", ['compile-ts'], function() {
             './source/js/smoke.js',
             './source/js/client.js',
             './source/js/input.js',
+            './source/js/weapon.js',
             './source/js/ship.js',
+            './source/js/drone.js',
             './source/js/asteroid.js',
             './source/js/world.js',
         ])

@@ -10,7 +10,7 @@ var deltav;
         }
         update(time, world, input) {
             super.update(time, world, input);
-            this.radius += 0.1;
+            this.radius += 0.5;
             this.opacity -= 0.1;
             if (this.opacity < 0) {
                 this.isDead = true;

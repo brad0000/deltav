@@ -20,10 +20,13 @@ namespace deltav {
 
         public getX() { return this.position.e(1); }
         public getY() { return this.position.e(2); }
+
+        public getP() { return this.position.dup(); }
         public getV() { return this.velocity.dup(); }
+
         public getH() { return this.heading; }
 
-        public update(time: number, world: World, input: Input) {
+        public update(time: number, world: World, input: IInput) {
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
         }

@@ -30,10 +30,17 @@ namespace deltav {
                     Math.random() * 30));
             }
 
-            this.bodies.push(new Ship(this.logger, 400, 500));
+            this.bodies.push(new Ship(this.logger, this.width / 2, this.height / 4));
+
+            for (let i = 0; i < 10; i++) {
+                this.bodies.push(new Drone(
+                    this.logger,
+                    Math.random() * this.width,
+                    Math.random() * this.height));
+            }
         }
 
-        public update(time: number, input: Input) {
+        public update(time: number, input: IInput) {
             this.gcCountdown -= time;
             if (this.gcCountdown < 0) {
                 // remove dead bodies

@@ -1,6 +1,11 @@
 
 namespace deltav {
 
+    export interface IInput {
+        lastClick: MouseEvent;
+        isDown(key: CtlKey): boolean;
+    }
+
     export enum CtlKey {
         Up = 104,
         Down = 98,
@@ -15,7 +20,7 @@ namespace deltav {
     /*
      * http://www.cambiaresearch.com/articles/15/javascript-key-codes
      */
-    export class Input {
+    export class Input implements IInput {
         public lastClick: MouseEvent;
         private pressed = new Array<boolean>();
 
