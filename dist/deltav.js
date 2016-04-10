@@ -1337,9 +1337,9 @@ var deltav;
         getP() { return this.position.dup(); }
         getV() { return this.velocity.dup(); }
         getH() { return this.heading; }
-        getBox() {
+        getCollisionBox() {
             let p = this.position.elements;
-            return new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
+            return new deltav.Box(p[1] - this.collisionRadius, p[1] + this.collisionRadius, p[0] + this.collisionRadius, p[0] - this.collisionRadius);
         }
         update(time, world, input) {
             this.position = this.position.add(this.velocity.multiply(time));
@@ -1361,13 +1361,13 @@ var deltav;
         collide(body) {
             this.isDead = true;
             body.isDead = true;
-            return new deltav.Wreckage(this.logger, this.position, this.velocity.avg(body.getV()));
+            return new deltav.Wreckage(this.logger, this.position, this.velocity.avg(body.getV()), (this.radius + body.radius) / 2);
         }
         setGeometry(geometry) {
             this.geometry = geometry;
             let lengths = this.geometry.map((v, i, e) => { return v.modulus(); });
             this.radius = Math.max(...lengths);
-            this.collisionRadius = this.radius * 0.3;
+            this.collisionRadius = this.radius * 0.5;
         }
     }
     deltav.Body = Body;
@@ -1399,16 +1399,21 @@ var deltav;
 var deltav;
 (function (deltav) {
     class Wreckage extends deltav.Body {
-        constructor(logger, position, velocity) {
+        constructor(logger, position, velocity, radius) {
             super(logger, position);
             this.velocity = velocity;
+            this.radius = radius * .75;
         }
         update(time, world, input) {
             super.update(time, world, input);
             world.addStaticBody(new Smoke(this.logger, this.position, this.velocity.add([
                 Math.random() * 100,
                 Math.random() * 100,
-            ]), 2));
+            ]), this.radius));
+            this.radius /= 1.05;
+            if (this.radius < 0.5) {
+                this.isDead = true;
+            }
         }
         render(ctx) {
         }
@@ -1427,7 +1432,7 @@ var deltav;
                 "255,216,0",
                 "255,216,0",
                 "255,255,255",
-                "0,255,255",
+                "111,237,252",
             ];
             this.velocity = velocity;
             this.opacity = 1;
@@ -1962,7 +1967,7 @@ var deltav;
                 ]), Math.random() * 30));
             }
             this.addDynamicBody(new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4])));
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 100; i++) {
                 this.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
                     Math.random() * this.width,
                     Math.random() * this.height,
@@ -2011,7 +2016,7 @@ var deltav;
                 return false;
             }
             else {
-                if (a.getBox().intersects(b.getBox())) {
+                if (a.getCollisionBox().intersects(b.getCollisionBox())) {
                     if (!this.isBulletHittingWeapon(a, b)) {
                         return true;
                     }

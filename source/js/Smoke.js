@@ -1,16 +1,21 @@
 var deltav;
 (function (deltav) {
     class Wreckage extends deltav.Body {
-        constructor(logger, position, velocity) {
+        constructor(logger, position, velocity, radius) {
             super(logger, position);
             this.velocity = velocity;
+            this.radius = radius * .75;
         }
         update(time, world, input) {
             super.update(time, world, input);
             world.addStaticBody(new Smoke(this.logger, this.position, this.velocity.add([
                 Math.random() * 100,
                 Math.random() * 100,
-            ]), 2));
+            ]), this.radius));
+            this.radius /= 1.05;
+            if (this.radius < 0.5) {
+                this.isDead = true;
+            }
         }
         render(ctx) {
         }
@@ -29,7 +34,7 @@ var deltav;
                 "255,216,0",
                 "255,216,0",
                 "255,255,255",
-                "0,255,255",
+                "111,237,252",
             ];
             this.velocity = velocity;
             this.opacity = 1;

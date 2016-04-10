@@ -29,13 +29,13 @@ namespace deltav {
 
         public getH() { return this.heading; }
 
-        public getBox() {
+        public getCollisionBox() {
             let p = this.position.elements;
             return new Box(
-                p[1] - this.radius,
-                p[1] + this.radius,
-                p[0] + this.radius,
-                p[0] - this.radius);
+                p[1] - this.collisionRadius,
+                p[1] + this.collisionRadius,
+                p[0] + this.collisionRadius,
+                p[0] - this.collisionRadius);
         }
 
         public update(time: number, world: World, input: IInput) {
@@ -74,14 +74,15 @@ namespace deltav {
             return new Wreckage(
                 this.logger,
                 this.position,
-                this.velocity.avg(body.getV()));
+                this.velocity.avg(body.getV()),
+                (this.radius + body.radius) / 2);
         }
 
         protected setGeometry(geometry: Array<Vector>) {
             this.geometry = geometry;
             let lengths = this.geometry.map((v, i, e) => { return v.modulus(); });
             this.radius = Math.max(...lengths);
-            this.collisionRadius = this.radius * 0.3;
+            this.collisionRadius = this.radius * 0.5;
         }
     }
 }

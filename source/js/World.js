@@ -23,7 +23,7 @@ var deltav;
                 ]), Math.random() * 30));
             }
             this.addDynamicBody(new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4])));
-            for (let i = 0; i < 10; i++) {
+            for (let i = 0; i < 100; i++) {
                 this.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
                     Math.random() * this.width,
                     Math.random() * this.height,
@@ -72,7 +72,7 @@ var deltav;
                 return false;
             }
             else {
-                if (a.getBox().intersects(b.getBox())) {
+                if (a.getCollisionBox().intersects(b.getCollisionBox())) {
                     if (!this.isBulletHittingWeapon(a, b)) {
                         return true;
                     }

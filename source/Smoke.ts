@@ -1,9 +1,10 @@
 namespace deltav {
     export class Wreckage extends Body {
 
-        constructor(logger: Logger, position: Vector, velocity: Vector) {
+        constructor(logger: Logger, position: Vector, velocity: Vector, radius: number) {
             super(logger, position);
             this.velocity = velocity;
+            this.radius = radius * .75;
         }
 
         public update(time: number, world: World, input: Input) {
@@ -17,7 +18,13 @@ namespace deltav {
                       Math.random() * 100,
                       Math.random() * 100,
                     ]),
-                    2));
+                    this.radius));
+
+            this.radius /= 1.05;
+
+            if (this.radius < 0.5) {
+                this.isDead = true;
+            }
         }
 
         public render(ctx: CanvasRenderingContext2D) {
@@ -38,7 +45,7 @@ namespace deltav {
             "255,216,0",
             "255,216,0",
             "255,255,255",
-            "0,255,255",
+            "111,237,252",
         ];
 
         constructor(logger: Logger, position: Vector, velocity: Vector, radius: number, color?: string) {

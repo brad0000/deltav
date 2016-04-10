@@ -18,9 +18,9 @@ var deltav;
         getP() { return this.position.dup(); }
         getV() { return this.velocity.dup(); }
         getH() { return this.heading; }
-        getBox() {
+        getCollisionBox() {
             let p = this.position.elements;
-            return new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
+            return new deltav.Box(p[1] - this.collisionRadius, p[1] + this.collisionRadius, p[0] + this.collisionRadius, p[0] - this.collisionRadius);
         }
         update(time, world, input) {
             this.position = this.position.add(this.velocity.multiply(time));
@@ -42,13 +42,13 @@ var deltav;
         collide(body) {
             this.isDead = true;
             body.isDead = true;
-            return new deltav.Wreckage(this.logger, this.position, this.velocity.avg(body.getV()));
+            return new deltav.Wreckage(this.logger, this.position, this.velocity.avg(body.getV()), (this.radius + body.radius) / 2);
         }
         setGeometry(geometry) {
             this.geometry = geometry;
             let lengths = this.geometry.map((v, i, e) => { return v.modulus(); });
             this.radius = Math.max(...lengths);
-            this.collisionRadius = this.radius * 0.3;
+            this.collisionRadius = this.radius * 0.5;
         }
     }
     deltav.Body = Body;
