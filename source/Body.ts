@@ -16,6 +16,7 @@ namespace deltav {
         protected collisionRadius: number;
 
         private geometry = Array<Vector>();
+        private boundingBox: Box = null;
 
         constructor(logger: Logger, position: Vector) {
             this.position = position;
@@ -42,19 +43,22 @@ namespace deltav {
         }
 
         public getBoundingBox() {
-            let p = this.position.elements;
-            return new Box(
-                p[1] - this.radius,
-                p[1] + this.radius,
-                p[0] + this.radius,
-                p[0] - this.radius);
+            if (this.boundingBox == null) {
+                let p = this.position.elements;
+                this.boundingBox = new Box(
+                    p[1] - this.radius,
+                    p[1] + this.radius,
+                    p[0] + this.radius,
+                    p[0] - this.radius);
+            }
+            return this.boundingBox;
         }
 
 
         public update(time: number, world: World, input: IInput) {
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
-
+            this.boundingBox = null;
             // if (this.health < 1) {
             //     world.addStaticBody(
             //         new Smoke(

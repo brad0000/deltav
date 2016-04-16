@@ -10,6 +10,7 @@ var deltav;
             this.acceleration = Vector.Zero(2);
             this.heading = 0;
             this.geometry = Array();
+            this.boundingBox = null;
             this.position = position;
             this.brush = "black";
             this.rotationSpeed = 0;
@@ -25,12 +26,16 @@ var deltav;
             return new deltav.Box(p[1] - this.collisionRadius, p[1] + this.collisionRadius, p[0] + this.collisionRadius, p[0] - this.collisionRadius);
         }
         getBoundingBox() {
-            let p = this.position.elements;
-            return new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
+            if (this.boundingBox == null) {
+                let p = this.position.elements;
+                this.boundingBox = new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
+            }
+            return this.boundingBox;
         }
         update(time, world, input) {
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
+            this.boundingBox = null;
         }
         render(ctx) {
             ctx.fillStyle = this.brush;

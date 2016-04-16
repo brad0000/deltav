@@ -8,46 +8,17 @@ namespace deltav {
         private gcCountdown = 10;
 
         private starTree: RTree;
+        private loader: WorldLoader;
 
         constructor(private logger: Logger, public width: number, public height: number) {
             super(0, height, width, 0);
 
             this.starTree = new RTree(this);
 
-            for (let i = 0; i < 200000; i++) {
-                this.starTree.add(
-                    new Star(
-                        this.logger,
-                        Vector.create([
-                            Math.random() * this.width,
-                            Math.random() * this.height,
-                        ]),
-                        Math.random() * 1.5));
-            }
-
-            for (let i = 0; i < 500; i++) {
-                this.addStaticBody(
-                    new Asteroid(
-                        this.logger,
-                        Vector.create([
-                            Math.random() * this.width,
-                            Math.random() * this.height,
-                        ]),
-                        Math.random() * 30));
-            }
-
             this.player = new Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
             this.addDynamicBody(this.player);
 
-            for (let i = 0; i < 5; i++) {
-                this.addDynamicBody(
-                    new Drone(
-                        this.logger,
-                        Vector.create([
-                            Math.random() * this.width,
-                            Math.random() * this.height,
-                        ])));
-            }
+            this.loader = new WorldLoader(logger, this);
         }
 
         public addStaticBody(body: Body) {
@@ -60,6 +31,8 @@ namespace deltav {
 
         public update(time: number, input: IInput) {
             this.gcCountdown -= time;
+
+            this.loader.update(time);
 
             // collision detection
             let skipHashset: { [id: string]: boolean; } = {};
@@ -102,6 +75,10 @@ namespace deltav {
 
         public getPlayerPosition() {
             return this.player.getP();
+        }
+
+        public addStar(star: Body) {
+            this.starTree.add(star);
         }
 
         private handleCollision(a: Body, b: Body) {
@@ -201,4 +178,66 @@ namespace deltav {
             
         }
     }
+    
+    export class WorldLoader {
+        private starsPreload: Array<Body>;
+        
+        constructor(private logger: Logger, private world: World) {
+
+            alert("creating world");
+
+            alert("creating stars");
+
+            this.starsPreload = new Array<Body>(500000);
+            
+            for (let i = 0; i < this.starsPreload.length; i++) {
+                this.starsPreload[i] = 
+                    new Star(
+                        this.logger,
+                        Vector.create([
+                            Math.random() * this.world.width,
+                            Math.random() * this.world.height,
+                        ]),
+                        Math.random() * 1.5);
+            }
+
+            alert("moving on");
+            
+            for (let i = 0; i < 500; i++) {
+                this.world.addStaticBody(
+                    new Asteroid(
+                        this.logger,
+                        Vector.create([
+                            Math.random() * this.world.width,
+                            Math.random() * this.world.height,
+                        ]),
+                        Math.random() * 30));
+            }
+
+            for (let i = 0; i < 5; i++) {
+                this.world.addDynamicBody(
+                    new Drone(
+                        this.logger,
+                        Vector.create([
+                            Math.random() * this.world.width,
+                            Math.random() * this.world.height,
+                        ])));
+            }
+            
+        }
+        
+        public update(time: number) {
+            if (this.starsPreload.length > 0) {
+                
+                if (this.starsPreload.length % 1000 === 0) {
+                    console.log(this.starsPreload.length);
+                }
+                
+                for (let i = 0; i < 10; i++) {
+                    this.world.addStar(this.starsPreload.pop());
+                }
+            }
+        }
+    }
+    
 }

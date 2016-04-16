@@ -6,8 +6,8 @@ namespace deltav {
 
         constructor(world: World) {
             
-            let iBoxes: Box[], jBoxes: Box[], kBoxes: Box[];
-            let iNode: RTreeNode, jNode: RTreeNode, kNode: RTreeNode;
+            let iBoxes: Box[], jBoxes: Box[], kBoxes: Box[], lBoxes: Box[], mBoxes: Box[];
+            let iNode: RTreeNode, jNode: RTreeNode, kNode: RTreeNode, lNode: RTreeNode, mNode: RTreeNode;
             
             this.root = new RTreeNode(world, false);
 
@@ -22,7 +22,21 @@ namespace deltav {
                     kBoxes = jBoxes[j].divide();
                     for (let k = 0; k < 4; k++) {
                         kNode = new RTreeNode(kBoxes[k], false);
-                        // No children
+                        
+                        lBoxes = kBoxes[k].divide();
+                        for (let l = 0; l < 4; l++) {
+                            lNode = new RTreeNode(lBoxes[l], false);
+
+                            mBoxes = lBoxes[l].divide();
+                            for (let m = 0; m < 4; m++) {
+                                mNode = new RTreeNode(mBoxes[m], false);
+                                lNode.children.push(mNode);
+                            }                        
+                            
+                            kNode.children.push(lNode);
+                        }
+                        
+                        jNode.children.push(kNode);    
                     }                
                     
                     iNode.children.push(jNode);

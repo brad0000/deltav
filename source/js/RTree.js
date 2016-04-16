@@ -2,8 +2,8 @@ var deltav;
 (function (deltav) {
     class RTree {
         constructor(world) {
-            let iBoxes, jBoxes, kBoxes;
-            let iNode, jNode, kNode;
+            let iBoxes, jBoxes, kBoxes, lBoxes, mBoxes;
+            let iNode, jNode, kNode, lNode, mNode;
             this.root = new RTreeNode(world, false);
             iBoxes = world.divide();
             for (let i = 0; i < iBoxes.length; i++) {
@@ -14,6 +14,17 @@ var deltav;
                     kBoxes = jBoxes[j].divide();
                     for (let k = 0; k < 4; k++) {
                         kNode = new RTreeNode(kBoxes[k], false);
+                        lBoxes = kBoxes[k].divide();
+                        for (let l = 0; l < 4; l++) {
+                            lNode = new RTreeNode(lBoxes[l], false);
+                            mBoxes = lBoxes[l].divide();
+                            for (let m = 0; m < 4; m++) {
+                                mNode = new RTreeNode(mBoxes[m], false);
+                                lNode.children.push(mNode);
+                            }
+                            kNode.children.push(lNode);
+                        }
+                        jNode.children.push(kNode);
                     }
                     iNode.children.push(jNode);
                 }

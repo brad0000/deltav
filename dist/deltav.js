@@ -1274,8 +1274,8 @@ var deltav;
 (function (deltav) {
     class RTree {
         constructor(world) {
-            let iBoxes, jBoxes, kBoxes;
-            let iNode, jNode, kNode;
+            let iBoxes, jBoxes, kBoxes, lBoxes, mBoxes;
+            let iNode, jNode, kNode, lNode, mNode;
             this.root = new RTreeNode(world, false);
             iBoxes = world.divide();
             for (let i = 0; i < iBoxes.length; i++) {
@@ -1286,6 +1286,17 @@ var deltav;
                     kBoxes = jBoxes[j].divide();
                     for (let k = 0; k < 4; k++) {
                         kNode = new RTreeNode(kBoxes[k], false);
+                        lBoxes = kBoxes[k].divide();
+                        for (let l = 0; l < 4; l++) {
+                            lNode = new RTreeNode(lBoxes[l], false);
+                            mBoxes = lBoxes[l].divide();
+                            for (let m = 0; m < 4; m++) {
+                                mNode = new RTreeNode(mBoxes[m], false);
+                                lNode.children.push(mNode);
+                            }
+                            kNode.children.push(lNode);
+                        }
+                        jNode.children.push(kNode);
                     }
                     iNode.children.push(jNode);
                 }
@@ -1459,6 +1470,7 @@ var deltav;
             this.acceleration = Vector.Zero(2);
             this.heading = 0;
             this.geometry = Array();
+            this.boundingBox = null;
             this.position = position;
             this.brush = "black";
             this.rotationSpeed = 0;
@@ -1474,12 +1486,16 @@ var deltav;
             return new deltav.Box(p[1] - this.collisionRadius, p[1] + this.collisionRadius, p[0] + this.collisionRadius, p[0] - this.collisionRadius);
         }
         getBoundingBox() {
-            let p = this.position.elements;
-            return new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
+            if (this.boundingBox == null) {
+                let p = this.position.elements;
+                this.boundingBox = new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
+            }
+            return this.boundingBox;
         }
         update(time, world, input) {
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
+            this.boundingBox = null;
         }
         render(ctx) {
             ctx.fillStyle = this.brush;
@@ -2137,26 +2153,9 @@ var deltav;
             this.dynamicBodies = new Array();
             this.gcCountdown = 10;
             this.starTree = new deltav.RTree(this);
-            for (let i = 0; i < 200000; i++) {
-                this.starTree.add(new deltav.Star(this.logger, Vector.create([
-                    Math.random() * this.width,
-                    Math.random() * this.height,
-                ]), Math.random() * 1.5));
-            }
-            for (let i = 0; i < 500; i++) {
-                this.addStaticBody(new deltav.Asteroid(this.logger, Vector.create([
-                    Math.random() * this.width,
-                    Math.random() * this.height,
-                ]), Math.random() * 30));
-            }
             this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
             this.addDynamicBody(this.player);
-            for (let i = 0; i < 5; i++) {
-                this.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
-                    Math.random() * this.width,
-                    Math.random() * this.height,
-                ])));
-            }
+            this.loader = new WorldLoader(logger, this);
         }
         addStaticBody(body) {
             this.staticBodies.push(body);
@@ -2166,6 +2165,7 @@ var deltav;
         }
         update(time, input) {
             this.gcCountdown -= time;
+            this.loader.update(time);
             let skipHashset = {};
             let a, b;
             for (let i = 0; i < this.dynamicBodies.length; i++) {
@@ -2196,6 +2196,9 @@ var deltav;
         }
         getPlayerPosition() {
             return this.player.getP();
+        }
+        addStar(star) {
+            this.starTree.add(star);
         }
         handleCollision(a, b) {
             let isADead = a.collide(b);
@@ -2275,6 +2278,46 @@ var deltav;
         }
     }
     deltav.World = World;
+    class WorldLoader {
+        constructor(logger, world) {
+            this.logger = logger;
+            this.world = world;
+            alert("creating world");
+            alert("creating stars");
+            this.starsPreload = new Array(500000);
+            for (let i = 0; i < this.starsPreload.length; i++) {
+                this.starsPreload[i] =
+                    new deltav.Star(this.logger, Vector.create([
+                        Math.random() * this.world.width,
+                        Math.random() * this.world.height,
+                    ]), Math.random() * 1.5);
+            }
+            alert("moving on");
+            for (let i = 0; i < 500; i++) {
+                this.world.addStaticBody(new deltav.Asteroid(this.logger, Vector.create([
+                    Math.random() * this.world.width,
+                    Math.random() * this.world.height,
+                ]), Math.random() * 30));
+            }
+            for (let i = 0; i < 5; i++) {
+                this.world.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
+                    Math.random() * this.world.width,
+                    Math.random() * this.world.height,
+                ])));
+            }
+        }
+        update(time) {
+            if (this.starsPreload.length > 0) {
+                if (this.starsPreload.length % 1000 === 0) {
+                    console.log(this.starsPreload.length);
+                }
+                for (let i = 0; i < 10; i++) {
+                    this.world.addStar(this.starsPreload.pop());
+                }
+            }
+        }
+    }
+    deltav.WorldLoader = WorldLoader;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=World.js.map
