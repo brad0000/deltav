@@ -140,9 +140,8 @@ var deltav;
         constructor(logger, world) {
             this.logger = logger;
             this.world = world;
-            alert("creating world");
-            alert("creating stars");
             this.starsPreload = new Array(500000);
+            this.starsPreloadIndex = 0;
             for (let i = 0; i < this.starsPreload.length; i++) {
                 this.starsPreload[i] =
                     new deltav.Star(this.logger, Vector.create([
@@ -150,14 +149,13 @@ var deltav;
                         Math.random() * this.world.height,
                     ]), Math.random() * 1.5);
             }
-            alert("moving on");
-            for (let i = 0; i < 500; i++) {
+            for (let i = 0; i < 1000; i++) {
                 this.world.addStaticBody(new deltav.Asteroid(this.logger, Vector.create([
                     Math.random() * this.world.width,
                     Math.random() * this.world.height,
                 ]), Math.random() * 30));
             }
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 100; i++) {
                 this.world.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
                     Math.random() * this.world.width,
                     Math.random() * this.world.height,
@@ -165,12 +163,13 @@ var deltav;
             }
         }
         update(time) {
-            if (this.starsPreload.length > 0) {
-                if (this.starsPreload.length % 1000 === 0) {
-                    console.log(this.starsPreload.length);
+            if (this.starsPreload != null) {
+                for (; this.starsPreloadIndex < this.starsPreload.length; this.starsPreloadIndex++) {
+                    this.world.addStar(this.starsPreload[this.starsPreloadIndex]);
                 }
-                for (let i = 0; i < 10; i++) {
-                    this.world.addStar(this.starsPreload.pop());
+                if (this.starsPreloadIndex === this.starsPreload.length - 1) {
+                    this.starsPreload = [];
+                    this.starsPreload = null;
                 }
             }
         }

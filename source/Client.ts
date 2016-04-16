@@ -16,7 +16,7 @@ namespace deltav {
             canvas.height = window.innerHeight;
 
             this.logger = new Logger(logArea);
-            this.world = new World(this.logger, 20000, 40000);
+            this.world = new World(this.logger, 100000, 100000);
             this.view = new View(this.logger, canvas.width, canvas.height, this.world);
             this.input = new Input(canvas, document);
             this.ctx = canvas.getContext("2d");

@@ -1276,22 +1276,22 @@ var deltav;
         constructor(world) {
             let iBoxes, jBoxes, kBoxes, lBoxes, mBoxes;
             let iNode, jNode, kNode, lNode, mNode;
-            this.root = new RTreeNode(world, false);
+            this.root = new RTreeNode(world, false, false);
             iBoxes = world.divide();
             for (let i = 0; i < iBoxes.length; i++) {
-                iNode = new RTreeNode(iBoxes[i], false);
+                iNode = new RTreeNode(iBoxes[i], false, false);
                 jBoxes = iBoxes[i].divide();
                 for (let j = 0; j < 4; j++) {
-                    jNode = new RTreeNode(jBoxes[j], false);
+                    jNode = new RTreeNode(jBoxes[j], false, false);
                     kBoxes = jBoxes[j].divide();
                     for (let k = 0; k < 4; k++) {
-                        kNode = new RTreeNode(kBoxes[k], false);
+                        kNode = new RTreeNode(kBoxes[k], false, false);
                         lBoxes = kBoxes[k].divide();
                         for (let l = 0; l < 4; l++) {
-                            lNode = new RTreeNode(lBoxes[l], false);
+                            lNode = new RTreeNode(lBoxes[l], false, false);
                             mBoxes = lBoxes[l].divide();
                             for (let m = 0; m < 4; m++) {
-                                mNode = new RTreeNode(mBoxes[m], false);
+                                mNode = new RTreeNode(mBoxes[m], true, false);
                                 lNode.children.push(mNode);
                             }
                             kNode.children.push(lNode);
@@ -1314,8 +1314,9 @@ var deltav;
     }
     deltav.RTree = RTree;
     class RTreeNode {
-        constructor(box, isLeaf) {
+        constructor(box, isLastBranch, isLeaf) {
             this.box = box;
+            this.isLastBranch = isLastBranch;
             this.isLeaf = isLeaf;
             this.children = new Array();
         }
@@ -1340,22 +1341,18 @@ var deltav;
             if (this.isLeaf) {
                 return null;
             }
-            else {
-                let result = null;
-                for (let i = 0; i < this.children.length; i++) {
-                    result = this.children[i].add(body);
-                    if (result != null) {
-                        return result;
-                    }
-                }
-                if (this.box.contains(body.getBoundingBox())) {
-                    result = new RTreeNode(body.getBoundingBox(), true);
+            else if (this.isLastBranch) {
+                if (this.box.intersects(body.getBoundingBox())) {
+                    let result = new RTreeNode(body.getBoundingBox(), false, true);
                     result.body = body;
                     this.children.push(result);
-                    return result;
                 }
-                else {
-                    return null;
+            }
+            else {
+                if (this.box.intersects(body.getBoundingBox())) {
+                    for (let i = 0; i < this.children.length; i++) {
+                        this.children[i].add(body);
+                    }
                 }
             }
         }
@@ -1627,7 +1624,7 @@ var deltav;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             this.logger = new deltav.Logger(logArea);
-            this.world = new deltav.World(this.logger, 20000, 40000);
+            this.world = new deltav.World(this.logger, 100000, 100000);
             this.view = new View(this.logger, canvas.width, canvas.height, this.world);
             this.input = new deltav.Input(canvas, document);
             this.ctx = canvas.getContext("2d");
@@ -2282,9 +2279,8 @@ var deltav;
         constructor(logger, world) {
             this.logger = logger;
             this.world = world;
-            alert("creating world");
-            alert("creating stars");
             this.starsPreload = new Array(500000);
+            this.starsPreloadIndex = 0;
             for (let i = 0; i < this.starsPreload.length; i++) {
                 this.starsPreload[i] =
                     new deltav.Star(this.logger, Vector.create([
@@ -2292,14 +2288,13 @@ var deltav;
                         Math.random() * this.world.height,
                     ]), Math.random() * 1.5);
             }
-            alert("moving on");
-            for (let i = 0; i < 500; i++) {
+            for (let i = 0; i < 1000; i++) {
                 this.world.addStaticBody(new deltav.Asteroid(this.logger, Vector.create([
                     Math.random() * this.world.width,
                     Math.random() * this.world.height,
                 ]), Math.random() * 30));
             }
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 100; i++) {
                 this.world.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
                     Math.random() * this.world.width,
                     Math.random() * this.world.height,
@@ -2307,12 +2302,13 @@ var deltav;
             }
         }
         update(time) {
-            if (this.starsPreload.length > 0) {
-                if (this.starsPreload.length % 1000 === 0) {
-                    console.log(this.starsPreload.length);
+            if (this.starsPreload != null) {
+                for (; this.starsPreloadIndex < this.starsPreload.length; this.starsPreloadIndex++) {
+                    this.world.addStar(this.starsPreload[this.starsPreloadIndex]);
                 }
-                for (let i = 0; i < 10; i++) {
-                    this.world.addStar(this.starsPreload.pop());
+                if (this.starsPreloadIndex === this.starsPreload.length - 1) {
+                    this.starsPreload = [];
+                    this.starsPreload = null;
                 }
             }
         }

@@ -6,7 +6,7 @@ var deltav;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             this.logger = new deltav.Logger(logArea);
-            this.world = new deltav.World(this.logger, 20000, 40000);
+            this.world = new deltav.World(this.logger, 100000, 100000);
             this.view = new View(this.logger, canvas.width, canvas.height, this.world);
             this.input = new deltav.Input(canvas, document);
             this.ctx = canvas.getContext("2d");

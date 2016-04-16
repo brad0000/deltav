@@ -181,14 +181,12 @@ namespace deltav {
     
     export class WorldLoader {
         private starsPreload: Array<Body>;
+        private starsPreloadIndex: number;
         
         constructor(private logger: Logger, private world: World) {
 
-            alert("creating world");
-
-            alert("creating stars");
-
             this.starsPreload = new Array<Body>(500000);
+            this.starsPreloadIndex = 0;
             
             for (let i = 0; i < this.starsPreload.length; i++) {
                 this.starsPreload[i] = 
@@ -201,9 +199,7 @@ namespace deltav {
                         Math.random() * 1.5);
             }
 
-            alert("moving on");
-            
-            for (let i = 0; i < 500; i++) {
+            for (let i = 0; i < 1000; i++) {
                 this.world.addStaticBody(
                     new Asteroid(
                         this.logger,
@@ -214,7 +210,7 @@ namespace deltav {
                         Math.random() * 30));
             }
 
-            for (let i = 0; i < 5; i++) {
+            for (let i = 0; i < 100; i++) {
                 this.world.addDynamicBody(
                     new Drone(
                         this.logger,
@@ -227,14 +223,13 @@ namespace deltav {
         }
         
         public update(time: number) {
-            if (this.starsPreload.length > 0) {
-                
-                if (this.starsPreload.length % 1000 === 0) {
-                    console.log(this.starsPreload.length);
+            if (this.starsPreload != null) {
+                for (; this.starsPreloadIndex < this.starsPreload.length; this.starsPreloadIndex++) {
+                    this.world.addStar(this.starsPreload[this.starsPreloadIndex]);
                 }
-                
-                for (let i = 0; i < 10; i++) {
-                    this.world.addStar(this.starsPreload.pop());
+                if (this.starsPreloadIndex === this.starsPreload.length - 1) {
+                    this.starsPreload = [];
+                    this.starsPreload = null;
                 }
             }
         }

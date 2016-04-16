@@ -9,27 +9,27 @@ namespace deltav {
             let iBoxes: Box[], jBoxes: Box[], kBoxes: Box[], lBoxes: Box[], mBoxes: Box[];
             let iNode: RTreeNode, jNode: RTreeNode, kNode: RTreeNode, lNode: RTreeNode, mNode: RTreeNode;
             
-            this.root = new RTreeNode(world, false);
+            this.root = new RTreeNode(world, false, false);
 
             iBoxes = world.divide();
             for (let i = 0; i < iBoxes.length; i++) {
-                iNode = new RTreeNode(iBoxes[i], false);
+                iNode = new RTreeNode(iBoxes[i], false, false);
                 
                 jBoxes = iBoxes[i].divide();
                 for (let j = 0; j < 4; j++) {
-                    jNode = new RTreeNode(jBoxes[j], false);
+                    jNode = new RTreeNode(jBoxes[j], false, false);
 
                     kBoxes = jBoxes[j].divide();
                     for (let k = 0; k < 4; k++) {
-                        kNode = new RTreeNode(kBoxes[k], false);
+                        kNode = new RTreeNode(kBoxes[k], false, false);
                         
                         lBoxes = kBoxes[k].divide();
                         for (let l = 0; l < 4; l++) {
-                            lNode = new RTreeNode(lBoxes[l], false);
+                            lNode = new RTreeNode(lBoxes[l], false, false);
 
                             mBoxes = lBoxes[l].divide();
                             for (let m = 0; m < 4; m++) {
-                                mNode = new RTreeNode(mBoxes[m], false);
+                                mNode = new RTreeNode(mBoxes[m], true, false);
                                 lNode.children.push(mNode);
                             }                        
                             
@@ -63,7 +63,7 @@ namespace deltav {
         public children = new Array<RTreeNode>();
         public body: Body;
         
-        constructor(public box: Box, public isLeaf: boolean) {
+        constructor(public box: Box, public isLastBranch, public isLeaf: boolean) {
             // nothing
         }
         
@@ -84,31 +84,23 @@ namespace deltav {
             }   
         }
         
-        public add(body: Body): RTreeNode {
+        public add(body: Body) {
             if (this.isLeaf) {
+                // this node IS a star, don't add stars to stars.
                 return null;
-            } else {
-                let result: RTreeNode = null;
-                
-                // First try adding it to my children
-                for (let i = 0; i < this.children.length; i++) {
-                    result = this.children[i].add(body);
-                    if (result != null) {
-                        return result;
-                    }
-                }
-                
-                // Otherwise check if i can take it
-                if (this.box.contains(body.getBoundingBox())) {
-                    // I can take it.
-                    result = new RTreeNode(body.getBoundingBox(), true);
+            } else if (this.isLastBranch) {
+                // this is the ONLY level that we add stars.
+                if (this.box.intersects(body.getBoundingBox())) {
+                    let result = new RTreeNode(body.getBoundingBox(), false, true);
                     result.body = body;
-                    
                     this.children.push(result);
-                    return result;
-                } else {
-                    // Neither my kids nor I can take it.
-                    return null;
+                }
+            } else {
+                // this is an internal branch, just check to see if it's worth notifying children.
+                if (this.box.intersects(body.getBoundingBox())) {
+                    for (let i = 0; i < this.children.length; i++) {
+                        this.children[i].add(body);
+                    }
                 }
             }
         }
