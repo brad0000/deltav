@@ -22,6 +22,37 @@ namespace deltav {
             this.height = this.south - this.north;
         }
 
+        public translate(x: number, y: number) {
+            this.west += x;
+            this.east += x;
+            this.north += y;
+            this.south += y;
+        }
+
+        public centerOn(position: Vector) {
+            this.west = position.e(1) - this.width / 2;
+            this.north = position.e(2) - this.height / 2;
+            this.east = this.west + this.width;
+            this.south = this.north + this.height;
+        }
+
+        public clamp(box: Box) {
+            if (this.west < box.west) {
+                this.west = box.west;
+                this.east = this.west + this.width;
+            } else if (this.east > box.east) {
+                this.east = box.east;
+                this.west = this.east - this.width;
+            }
+            if (this.north < box.north) {
+                this.north = box.north;
+                this.south = this.north + this.height;
+            } else if (this.south > box.south) {
+                this.south = box.south;
+                this.north = box.south - this.height;
+            }
+        }
+
         public intersects(other: Box): boolean {
             // check if a is totally outside b, in 2 dimensions, then negate.
             return !((this.south < other.north || this.north > other.south)

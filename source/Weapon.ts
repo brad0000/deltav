@@ -1,10 +1,10 @@
 namespace deltav {
     export class Weapon {
-        private velocity = 100;
-        private reloadTime = .5;
+        protected logger: Logger;
         private countdown = 0;
 
-        constructor(private ship: Ship) {
+        constructor(protected ship: Ship, public caliber: number, private velocity: number, private reloadTime: number) {
+            this.logger = ship.logger;
         }
 
         public ready() {
@@ -18,16 +18,17 @@ namespace deltav {
             }
         }
 
-        public fire(world: World, position: Vector, velocity: Vector, mass: number) {
-            let barrel = position.add(velocity.toUnitVector().multiply(15));
+        public fire(world: World, position: Vector, velocity: Vector) {
+            let barrel = position.add(velocity.toUnitVector().multiply(20));
             let shipV = this.ship.getV();
-            world.addDynamicBody(
-                new Bullet(
-                    this.ship.logger,
-                    this,
-                    barrel,
-                    shipV.add(shipV.toUnitVector().multiply(this.velocity))));
+            let bulletV = shipV.add(shipV.toUnitVector().multiply(this.velocity));
+            world.addDynamicBody(this.makeBullet(barrel, bulletV));
             this.countdown = this.reloadTime;
+        }
+
+        protected makeBullet(barrel: Vector, velocity: Vector): Bullet {
+            // nothing
+            return null;
         }
 
         public recentlyFired(bullet: Bullet): boolean {
@@ -35,14 +36,12 @@ namespace deltav {
         }
     }
 
-    export class Bullet extends Body {
-        constructor(logger: Logger, private weapon: Weapon, position: Vector, velocity: Vector) {
-            super(logger, position);
-            this.velocity = velocity;
-            this.mass = 2;
-            this.brush = "orange";
-            this.heading = velocity.toAngle();
+    export class GattlingGun extends Weapon {
+        constructor(ship: Ship) {
+            super(ship, 1, 100, 0.2);
+        }
 
+        public makeBullet(barrel: Vector, velocity: Vector) {
             let geo = [
                 Vector.create([-5, -2.5]),
                 Vector.create([4, -2.5]),
@@ -52,10 +51,68 @@ namespace deltav {
             ];
 
             for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.75);
+                geo[i] = geo[i].multiply(0.5);
             }
 
-            this.setGeometry(geo);
+            return new Bullet(
+                this.logger,
+                this,
+                barrel,
+                velocity,
+                "orange",
+                geo);
+        }
+
+        public fire(world: World, position: Vector, velocity: Vector) {
+            super.fire(world, position, velocity);
+        }
+    }
+
+    export class Canon extends Weapon {
+        constructor(ship: Ship) {
+            super(ship, 10, 50, 1);
+        }
+
+        public makeBullet(barrel: Vector, velocity: Vector) {
+
+            let geo = new Array<Vector>();
+            for (let i = 0; i < 10; i++) {
+                geo.push(
+                    Vector.create([1, 0])
+                        .rotate(Math.PI * 2 / 5 * i, Vector.Zero(2))
+                        .multiply(5));
+            }
+
+            return new Bullet(
+                this.logger,
+                this,
+                barrel,
+                velocity,
+                "#444461",
+                geo);
+        }
+
+        public fire(world: World, position: Vector, velocity: Vector) {
+            super.fire(world, position, velocity);
+        }
+    }
+
+    export class Bullet extends Body {
+        constructor(
+            logger: Logger,
+            private weapon: Weapon,
+            position: Vector,
+            velocity: Vector,
+            color: string,
+            geometry: Array<Vector>) {
+
+            super(logger, position);
+            this.velocity = velocity;
+            this.mass = weapon.caliber;
+            this.brush = color;
+            this.heading = velocity.toAngle();
+
+            this.setGeometry(geometry);
         }
 
         public update(time: number, world: World, input: Input) {

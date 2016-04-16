@@ -1307,6 +1307,36 @@ var deltav;
             this.width = this.east - this.west;
             this.height = this.south - this.north;
         }
+        translate(x, y) {
+            this.west += x;
+            this.east += x;
+            this.north += y;
+            this.south += y;
+        }
+        centerOn(position) {
+            this.west = position.e(1) - this.width / 2;
+            this.north = position.e(2) - this.height / 2;
+            this.east = this.west + this.width;
+            this.south = this.north + this.height;
+        }
+        clamp(box) {
+            if (this.west < box.west) {
+                this.west = box.west;
+                this.east = this.west + this.width;
+            }
+            else if (this.east > box.east) {
+                this.east = box.east;
+                this.west = this.east - this.width;
+            }
+            if (this.north < box.north) {
+                this.north = box.north;
+                this.south = this.north + this.height;
+            }
+            else if (this.south > box.south) {
+                this.south = box.south;
+                this.north = box.south - this.height;
+            }
+        }
         intersects(other) {
             return !((this.south < other.north || this.north > other.south)
                 || (this.east < other.west || this.west > other.east));
@@ -1322,6 +1352,7 @@ var deltav;
     class Body {
         constructor(logger, position) {
             this.isDead = false;
+            this.health = 1;
             this.mass = 5;
             this.position = Vector.Zero(2);
             this.velocity = Vector.Zero(2);
@@ -1337,9 +1368,14 @@ var deltav;
         getP() { return this.position.dup(); }
         getV() { return this.velocity.dup(); }
         getH() { return this.heading; }
+        getR() { return this.radius; }
         getCollisionBox() {
             let p = this.position.elements;
             return new deltav.Box(p[1] - this.collisionRadius, p[1] + this.collisionRadius, p[0] + this.collisionRadius, p[0] - this.collisionRadius);
+        }
+        getBoundingBox() {
+            let p = this.position.elements;
+            return new deltav.Box(p[1] - this.radius, p[1] + this.radius, p[0] + this.radius, p[0] - this.radius);
         }
         update(time, world, input) {
             this.position = this.position.add(this.velocity.multiply(time));
@@ -1359,15 +1395,15 @@ var deltav;
             ctx.fill();
         }
         collide(body) {
-            this.isDead = true;
-            body.isDead = true;
-            return new deltav.Wreckage(this.logger, this.position, this.velocity.avg(body.getV()), (this.radius + body.radius) / 2);
+            this.health -= body.mass / 100;
+            this.isDead = this.health <= 0;
+            return this.isDead;
         }
         setGeometry(geometry) {
             this.geometry = geometry;
             let lengths = this.geometry.map((v, i, e) => { return v.modulus(); });
             this.radius = Math.max(...lengths);
-            this.collisionRadius = this.radius * 0.5;
+            this.collisionRadius = this.radius * 0.7;
         }
     }
     deltav.Body = Body;
@@ -1475,7 +1511,8 @@ var deltav;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             this.logger = new deltav.Logger(logArea);
-            this.world = new deltav.World(this.logger, canvas.width, canvas.height);
+            this.world = new deltav.World(this.logger, 5000, 5000);
+            this.view = new View(this.logger, canvas.width, canvas.height, this.world);
             this.input = new deltav.Input(canvas, document);
             this.ctx = canvas.getContext("2d");
             this.startGameLoop();
@@ -1489,18 +1526,34 @@ var deltav;
         updateWorld(time) {
             this.clock += time;
             this.world.update(time, this.input);
+            this.view.update(time, this.world, this.input);
         }
         renderWorld() {
-            this.ctx.strokeStyle = "gray";
-            this.ctx.strokeRect(0, 0, this.world.width, this.world.height);
-            this.ctx.stroke();
-            this.ctx.strokeStyle = "black";
-            this.ctx.strokeText(this.clock.toFixed(1), 20, 20);
-            this.ctx.stroke();
-            this.world.render(this.ctx);
+            this.view.render(this.ctx);
         }
     }
     deltav.Client = Client;
+    class View extends deltav.Box {
+        constructor(logger, width, height, world) {
+            super(0, height, width, 0);
+            this.logger = logger;
+            this.world = world;
+        }
+        update(time, world, input) {
+            let playerPosition = world.getPlayerPosition();
+            this.centerOn(playerPosition);
+            this.clamp(world);
+        }
+        render(ctx) {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.fill();
+            ctx.translate(-this.west, -this.north);
+            this.world.render(ctx, this);
+            ctx.translate(this.west, this.north);
+        }
+    }
+    deltav.View = View;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=Client.js.map
@@ -1516,7 +1569,8 @@ var deltav;
         CtlKey[CtlKey["Brake"] = 40] = "Brake";
         CtlKey[CtlKey["Clockwise"] = 39] = "Clockwise";
         CtlKey[CtlKey["AntiClockwise"] = 37] = "AntiClockwise";
-        CtlKey[CtlKey["Fire"] = 17] = "Fire";
+        CtlKey[CtlKey["FirePrimary"] = 17] = "FirePrimary";
+        CtlKey[CtlKey["FireSecondary"] = 32] = "FireSecondary";
     })(deltav.CtlKey || (deltav.CtlKey = {}));
     var CtlKey = deltav.CtlKey;
     class Input {
@@ -1550,11 +1604,13 @@ var deltav;
 var deltav;
 (function (deltav) {
     class Weapon {
-        constructor(ship) {
+        constructor(ship, caliber, velocity, reloadTime) {
             this.ship = ship;
-            this.velocity = 100;
-            this.reloadTime = .5;
+            this.caliber = caliber;
+            this.velocity = velocity;
+            this.reloadTime = reloadTime;
             this.countdown = 0;
+            this.logger = ship.logger;
         }
         ready() {
             return this.countdown === 0;
@@ -1565,25 +1621,26 @@ var deltav;
                 this.countdown = 0;
             }
         }
-        fire(world, position, velocity, mass) {
-            let barrel = position.add(velocity.toUnitVector().multiply(15));
+        fire(world, position, velocity) {
+            let barrel = position.add(velocity.toUnitVector().multiply(20));
             let shipV = this.ship.getV();
-            world.addDynamicBody(new Bullet(this.ship.logger, this, barrel, shipV.add(shipV.toUnitVector().multiply(this.velocity))));
+            let bulletV = shipV.add(shipV.toUnitVector().multiply(this.velocity));
+            world.addDynamicBody(this.makeBullet(barrel, bulletV));
             this.countdown = this.reloadTime;
+        }
+        makeBullet(barrel, velocity) {
+            return null;
         }
         recentlyFired(bullet) {
             return bullet.isFrom(this) && this.countdown > 0;
         }
     }
     deltav.Weapon = Weapon;
-    class Bullet extends deltav.Body {
-        constructor(logger, weapon, position, velocity) {
-            super(logger, position);
-            this.weapon = weapon;
-            this.velocity = velocity;
-            this.mass = 2;
-            this.brush = "orange";
-            this.heading = velocity.toAngle();
+    class GattlingGun extends Weapon {
+        constructor(ship) {
+            super(ship, 1, 100, 0.2);
+        }
+        makeBullet(barrel, velocity) {
             let geo = [
                 Vector.create([-5, -2.5]),
                 Vector.create([4, -2.5]),
@@ -1592,9 +1649,42 @@ var deltav;
                 Vector.create([-5, 2.5]),
             ];
             for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.75);
+                geo[i] = geo[i].multiply(0.5);
             }
-            this.setGeometry(geo);
+            return new Bullet(this.logger, this, barrel, velocity, "orange", geo);
+        }
+        fire(world, position, velocity) {
+            super.fire(world, position, velocity);
+        }
+    }
+    deltav.GattlingGun = GattlingGun;
+    class Canon extends Weapon {
+        constructor(ship) {
+            super(ship, 10, 50, 1);
+        }
+        makeBullet(barrel, velocity) {
+            let geo = new Array();
+            for (let i = 0; i < 10; i++) {
+                geo.push(Vector.create([1, 0])
+                    .rotate(Math.PI * 2 / 5 * i, Vector.Zero(2))
+                    .multiply(5));
+            }
+            return new Bullet(this.logger, this, barrel, velocity, "#444461", geo);
+        }
+        fire(world, position, velocity) {
+            super.fire(world, position, velocity);
+        }
+    }
+    deltav.Canon = Canon;
+    class Bullet extends deltav.Body {
+        constructor(logger, weapon, position, velocity, color, geometry) {
+            super(logger, position);
+            this.weapon = weapon;
+            this.velocity = velocity;
+            this.mass = weapon.caliber;
+            this.brush = color;
+            this.heading = velocity.toAngle();
+            this.setGeometry(geometry);
         }
         update(time, world, input) {
             super.update(time, world, input);
@@ -1616,9 +1706,11 @@ var deltav;
     class Ship extends deltav.Body {
         constructor(logger, position) {
             super(logger, position);
-            this.power = 5000;
-            this.angularPower = 20;
-            this.weapon = new deltav.Weapon(this);
+            this.power = 20000;
+            this.angularPower = 40;
+            this.mass = 20;
+            this.gattlingGun = new deltav.GattlingGun(this);
+            this.canon = new deltav.Canon(this);
             this.brush = "red";
             this.velocity = Vector.create([0, 1]);
             let geo = [
@@ -1646,23 +1738,15 @@ var deltav;
             if (speed > 1) {
                 this.heading = this.velocity.toAngle();
             }
-            this.weapon.update(time);
-            if (input.isDown(deltav.CtlKey.Fire) && this.weapon.ready()) {
-                this.weapon.fire(world, this.position, this.velocity, this.mass);
+            this.gattlingGun.update(time);
+            this.canon.update(time);
+            if (input.isDown(deltav.CtlKey.FirePrimary) && this.gattlingGun.ready()) {
+                this.gattlingGun.fire(world, this.position, this.velocity);
+            }
+            if (input.isDown(deltav.CtlKey.FireSecondary) && this.canon.ready()) {
+                this.canon.fire(world, this.position, this.velocity);
             }
             let force = Vector.Zero(2);
-            if (input.isDown(deltav.CtlKey.Up)) {
-                force = force.add(Vector.create([0, -this.power]));
-            }
-            else if (input.isDown(deltav.CtlKey.Down)) {
-                force = force.add(Vector.create([0, this.power]));
-            }
-            if (input.isDown(deltav.CtlKey.Left)) {
-                force = force.add(Vector.create([-this.power, 0]));
-            }
-            else if (input.isDown(deltav.CtlKey.Right)) {
-                force = force.add(Vector.create([this.power, 0]));
-            }
             if (input.isDown(deltav.CtlKey.Accelerate)) {
                 if (this.velocity.eql(Vector.Zero(2))) {
                     this.velocity.setElements([0, -0.1]);
@@ -1695,17 +1779,15 @@ var deltav;
         }
         render(ctx) {
             super.render(ctx);
-            if (this.velocity.modulus() > 0.5) {
-                ctx.beginPath();
-                ctx.strokeStyle = "red";
-                ctx.moveTo(this.getX(), this.getY());
-                let endOfLine = this.position.add(this.velocity.toUnitVector().multiply(this.mass * 2));
-                ctx.lineTo(endOfLine.e(1), endOfLine.e(2));
-                ctx.stroke();
-            }
+            ctx.beginPath();
+            ctx.fillStyle = "white";
+            ctx.font = "10px Arial";
+            ctx.fillText((this.health * 100).toFixed(0), this.getX() - 10, this.getY() - 20);
+            ctx.fill();
         }
         recentlyFired(bullet) {
-            return this.weapon.recentlyFired(bullet);
+            return this.gattlingGun.recentlyFired(bullet)
+                || this.canon.recentlyFired(bullet);
         }
         scaleAngularPower(speed) {
             return this.angularPower * speed;
@@ -1966,8 +2048,9 @@ var deltav;
                     Math.random() * this.height,
                 ]), Math.random() * 30));
             }
-            this.addDynamicBody(new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4])));
-            for (let i = 0; i < 100; i++) {
+            this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
+            this.addDynamicBody(this.player);
+            for (let i = 0; i < 5; i++) {
                 this.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
                     Math.random() * this.width,
                     Math.random() * this.height,
@@ -1982,15 +2065,16 @@ var deltav;
         }
         update(time, input) {
             this.gcCountdown -= time;
+            let skipHashset = {};
             let a, b;
             for (let i = 0; i < this.dynamicBodies.length; i++) {
                 a = this.dynamicBodies[i];
                 for (let j = 0; j < this.dynamicBodies.length; j++) {
-                    if (i !== j) {
+                    if (i !== j || skipHashset[i + "," + j] === true) {
+                        skipHashset[j + "," + i] = true;
                         b = this.dynamicBodies[j];
                         if (this.intersect(a, b)) {
-                            let wreakage = a.collide(b);
-                            this.addStaticBody(wreakage);
+                            this.handleCollision(a, b);
                         }
                     }
                 }
@@ -2004,12 +2088,29 @@ var deltav;
                 this.updateBodies(this.dynamicBodies, time, input);
             }
         }
-        render(ctx) {
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, this.width, this.height);
-            ctx.fill();
-            this.renderBodies(this.staticBodies, ctx);
-            this.renderBodies(this.dynamicBodies, ctx);
+        render(ctx, clip) {
+            this.renderBodies(this.staticBodies, ctx, clip);
+            this.renderBodies(this.dynamicBodies, ctx, clip);
+        }
+        getPlayerPosition() {
+            return this.player.getP();
+        }
+        handleCollision(a, b) {
+            let isADead = a.collide(b);
+            let isBDead = b.collide(a);
+            let wreakage;
+            if (isADead && isBDead) {
+                wreakage = new deltav.Wreckage(this.logger, a.getP().avg(b.getP()), a.getV().avg(b.getV()), (a.getR() + b.getR()) / 2);
+            }
+            else if (isADead) {
+                wreakage = new deltav.Wreckage(this.logger, a.getP(), a.getV(), a.getR());
+            }
+            else if (isBDead) {
+                wreakage = new deltav.Wreckage(this.logger, b.getP(), b.getV(), b.getR());
+            }
+            if (wreakage != null) {
+                this.addStaticBody(wreakage);
+            }
         }
         intersect(a, b) {
             if (a.isDead || b.isDead) {
@@ -2054,9 +2155,9 @@ var deltav;
                 }
             }
         }
-        renderBodies(bodies, ctx) {
+        renderBodies(bodies, ctx, clip) {
             for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead) {
+                if (!bodies[i].isDead && clip.intersects(bodies[i].getBoundingBox())) {
                     bodies[i].render(ctx);
                 }
             }

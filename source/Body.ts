@@ -1,7 +1,9 @@
 namespace deltav {
     export class Body {
         public logger: Logger;
+
         public isDead = false;
+        protected health = 1;
 
         protected mass = 5;
         protected position = Vector.Zero(2);
@@ -28,6 +30,7 @@ namespace deltav {
         public getV() { return this.velocity.dup(); }
 
         public getH() { return this.heading; }
+        public getR() { return this.radius; }
 
         public getCollisionBox() {
             let p = this.position.elements;
@@ -38,9 +41,31 @@ namespace deltav {
                 p[0] - this.collisionRadius);
         }
 
+        public getBoundingBox() {
+            let p = this.position.elements;
+            return new Box(
+                p[1] - this.radius,
+                p[1] + this.radius,
+                p[0] + this.radius,
+                p[0] - this.radius);
+        }
+
+
         public update(time: number, world: World, input: IInput) {
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
+
+            // if (this.health < 1) {
+            //     world.addStaticBody(
+            //         new Smoke(
+            //             this.logger,
+            //             this.position,
+            //             this.velocity.add([
+            //                 Math.random() * 100,
+            //                 Math.random() * 100,
+            //             ]),
+            //             5));
+            // }
         }
 
         public render(ctx: CanvasRenderingContext2D) {
@@ -68,21 +93,17 @@ namespace deltav {
             // ctx.stroke();
         }
 
-        public collide(body: Body): Wreckage {
-            this.isDead = true;
-            body.isDead = true;
-            return new Wreckage(
-                this.logger,
-                this.position,
-                this.velocity.avg(body.getV()),
-                (this.radius + body.radius) / 2);
+        public collide(body: Body): boolean {
+            this.health -= body.mass / 100;
+            this.isDead = this.health <= 0;
+            return this.isDead;
         }
 
         protected setGeometry(geometry: Array<Vector>) {
             this.geometry = geometry;
             let lengths = this.geometry.map((v, i, e) => { return v.modulus(); });
             this.radius = Math.max(...lengths);
-            this.collisionRadius = this.radius * 0.5;
+            this.collisionRadius = this.radius * 0.7;
         }
     }
 }

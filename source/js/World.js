@@ -22,8 +22,9 @@ var deltav;
                     Math.random() * this.height,
                 ]), Math.random() * 30));
             }
-            this.addDynamicBody(new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4])));
-            for (let i = 0; i < 100; i++) {
+            this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
+            this.addDynamicBody(this.player);
+            for (let i = 0; i < 5; i++) {
                 this.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
                     Math.random() * this.width,
                     Math.random() * this.height,
@@ -38,15 +39,16 @@ var deltav;
         }
         update(time, input) {
             this.gcCountdown -= time;
+            let skipHashset = {};
             let a, b;
             for (let i = 0; i < this.dynamicBodies.length; i++) {
                 a = this.dynamicBodies[i];
                 for (let j = 0; j < this.dynamicBodies.length; j++) {
-                    if (i !== j) {
+                    if (i !== j || skipHashset[i + "," + j] === true) {
+                        skipHashset[j + "," + i] = true;
                         b = this.dynamicBodies[j];
                         if (this.intersect(a, b)) {
-                            let wreakage = a.collide(b);
-                            this.addStaticBody(wreakage);
+                            this.handleCollision(a, b);
                         }
                     }
                 }
@@ -60,12 +62,29 @@ var deltav;
                 this.updateBodies(this.dynamicBodies, time, input);
             }
         }
-        render(ctx) {
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, this.width, this.height);
-            ctx.fill();
-            this.renderBodies(this.staticBodies, ctx);
-            this.renderBodies(this.dynamicBodies, ctx);
+        render(ctx, clip) {
+            this.renderBodies(this.staticBodies, ctx, clip);
+            this.renderBodies(this.dynamicBodies, ctx, clip);
+        }
+        getPlayerPosition() {
+            return this.player.getP();
+        }
+        handleCollision(a, b) {
+            let isADead = a.collide(b);
+            let isBDead = b.collide(a);
+            let wreakage;
+            if (isADead && isBDead) {
+                wreakage = new deltav.Wreckage(this.logger, a.getP().avg(b.getP()), a.getV().avg(b.getV()), (a.getR() + b.getR()) / 2);
+            }
+            else if (isADead) {
+                wreakage = new deltav.Wreckage(this.logger, a.getP(), a.getV(), a.getR());
+            }
+            else if (isBDead) {
+                wreakage = new deltav.Wreckage(this.logger, b.getP(), b.getV(), b.getR());
+            }
+            if (wreakage != null) {
+                this.addStaticBody(wreakage);
+            }
         }
         intersect(a, b) {
             if (a.isDead || b.isDead) {
@@ -110,9 +129,9 @@ var deltav;
                 }
             }
         }
-        renderBodies(bodies, ctx) {
+        renderBodies(bodies, ctx, clip) {
             for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead) {
+                if (!bodies[i].isDead && clip.intersects(bodies[i].getBoundingBox())) {
                     bodies[i].render(ctx);
                 }
             }

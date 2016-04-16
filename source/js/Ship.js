@@ -3,9 +3,11 @@ var deltav;
     class Ship extends deltav.Body {
         constructor(logger, position) {
             super(logger, position);
-            this.power = 5000;
-            this.angularPower = 20;
-            this.weapon = new deltav.Weapon(this);
+            this.power = 20000;
+            this.angularPower = 40;
+            this.mass = 20;
+            this.gattlingGun = new deltav.GattlingGun(this);
+            this.canon = new deltav.Canon(this);
             this.brush = "red";
             this.velocity = Vector.create([0, 1]);
             let geo = [
@@ -33,23 +35,15 @@ var deltav;
             if (speed > 1) {
                 this.heading = this.velocity.toAngle();
             }
-            this.weapon.update(time);
-            if (input.isDown(deltav.CtlKey.Fire) && this.weapon.ready()) {
-                this.weapon.fire(world, this.position, this.velocity, this.mass);
+            this.gattlingGun.update(time);
+            this.canon.update(time);
+            if (input.isDown(deltav.CtlKey.FirePrimary) && this.gattlingGun.ready()) {
+                this.gattlingGun.fire(world, this.position, this.velocity);
+            }
+            if (input.isDown(deltav.CtlKey.FireSecondary) && this.canon.ready()) {
+                this.canon.fire(world, this.position, this.velocity);
             }
             let force = Vector.Zero(2);
-            if (input.isDown(deltav.CtlKey.Up)) {
-                force = force.add(Vector.create([0, -this.power]));
-            }
-            else if (input.isDown(deltav.CtlKey.Down)) {
-                force = force.add(Vector.create([0, this.power]));
-            }
-            if (input.isDown(deltav.CtlKey.Left)) {
-                force = force.add(Vector.create([-this.power, 0]));
-            }
-            else if (input.isDown(deltav.CtlKey.Right)) {
-                force = force.add(Vector.create([this.power, 0]));
-            }
             if (input.isDown(deltav.CtlKey.Accelerate)) {
                 if (this.velocity.eql(Vector.Zero(2))) {
                     this.velocity.setElements([0, -0.1]);
@@ -82,17 +76,15 @@ var deltav;
         }
         render(ctx) {
             super.render(ctx);
-            if (this.velocity.modulus() > 0.5) {
-                ctx.beginPath();
-                ctx.strokeStyle = "red";
-                ctx.moveTo(this.getX(), this.getY());
-                let endOfLine = this.position.add(this.velocity.toUnitVector().multiply(this.mass * 2));
-                ctx.lineTo(endOfLine.e(1), endOfLine.e(2));
-                ctx.stroke();
-            }
+            ctx.beginPath();
+            ctx.fillStyle = "white";
+            ctx.font = "10px Arial";
+            ctx.fillText((this.health * 100).toFixed(0), this.getX() - 10, this.getY() - 20);
+            ctx.fill();
         }
         recentlyFired(bullet) {
-            return this.weapon.recentlyFired(bullet);
+            return this.gattlingGun.recentlyFired(bullet)
+                || this.canon.recentlyFired(bullet);
         }
         scaleAngularPower(speed) {
             return this.angularPower * speed;

@@ -4,7 +4,7 @@ namespace deltav {
         public drag = -0.9;
         private staticBodies = new Array<Body>();
         private dynamicBodies = new Array<Body>();
-
+        private player: Ship;
         private gcCountdown = 10;
 
         constructor(private logger: Logger, public width: number, public height: number) {
@@ -32,10 +32,10 @@ namespace deltav {
                         Math.random() * 30));
             }
 
-            this.addDynamicBody(
-                new Ship(this.logger, Vector.create([this.width / 2, this.height / 4])));
+            this.player = new Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
+            this.addDynamicBody(this.player);
 
-            for (let i = 0; i < 100; i++) {
+            for (let i = 0; i < 5; i++) {
                 this.addDynamicBody(
                     new Drone(
                         this.logger,
@@ -58,16 +58,21 @@ namespace deltav {
             this.gcCountdown -= time;
 
             // collision detection
+            let skipHashset: { [id: string]: boolean; } = {};
             let a, b: Body;
             for (let i = 0; i < this.dynamicBodies.length; i++) {
                 a = this.dynamicBodies[i];
                 for (let j = 0; j < this.dynamicBodies.length; j++) {
-                    if (i !== j) {
+                    if (i !== j || skipHashset[i + "," + j] === true) {
+                        // flag not to check the inverse
+                        skipHashset[j + "," + i] = true;
+
+                        // get body b
                         b = this.dynamicBodies[j];
+
+                        // check for collisions
                         if (this.intersect(a, b)) {
-                            // bang.
-                            let wreakage = a.collide(b);
-                            this.addStaticBody(wreakage);
+                            this.handleCollision(a, b);
                         }
                     }
                 }
@@ -82,15 +87,47 @@ namespace deltav {
             }
         }
 
-        public render(ctx: CanvasRenderingContext2D) {
-            ctx.fillStyle = "black";
-            ctx.fillRect(0, 0, this.width, this.height);
-            ctx.fill();
-
-            this.renderBodies(this.staticBodies, ctx);
-            this.renderBodies(this.dynamicBodies, ctx);
+        public render(ctx: CanvasRenderingContext2D, clip: Box) {
+            this.renderBodies(this.staticBodies, ctx, clip);
+            this.renderBodies(this.dynamicBodies, ctx, clip);
         }
 
+        public getPlayerPosition() {
+            return this.player.getP();
+        }
+
+        private handleCollision(a: Body, b: Body) {
+
+            let isADead = a.collide(b);
+            let isBDead = b.collide(a);
+            
+            let wreakage: Wreckage;
+            
+            if (isADead && isBDead) {
+                wreakage = new Wreckage(
+                    this.logger,
+                    a.getP().avg(b.getP()), 
+                    a.getV().avg(b.getV()),
+                    (a.getR() + b.getR()) / 2);
+            } else if (isADead) {
+                wreakage = new Wreckage(
+                    this.logger,
+                    a.getP(), 
+                    a.getV(),
+                    a.getR());
+            } else if (isBDead) {
+                wreakage = new Wreckage(
+                    this.logger,
+                    b.getP(), 
+                    b.getV(),
+                    b.getR());
+            }
+            
+            if (wreakage != null) {
+                this.addStaticBody(wreakage);
+            }
+        }
+        
         private intersect(a: Body, b: Body): boolean {
             if (a.isDead || b.isDead) {
                 return false;
@@ -135,9 +172,9 @@ namespace deltav {
             }
         }
 
-        private renderBodies(bodies: Array<Body>, ctx: CanvasRenderingContext2D) {
+        private renderBodies(bodies: Array<Body>, ctx: CanvasRenderingContext2D, clip: Box) {
              for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead) {
+                if (!bodies[i].isDead && clip.intersects(bodies[i].getBoundingBox())) {
                     bodies[i].render(ctx);
                 }
              }

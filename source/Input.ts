@@ -15,7 +15,8 @@ namespace deltav {
         Brake = 40,
         Clockwise = 39,
         AntiClockwise = 37,
-        Fire = 17,
+        FirePrimary = 17,
+        FireSecondary = 32,
     }
     /*
      * http://www.cambiaresearch.com/articles/15/javascript-key-codes

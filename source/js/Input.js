@@ -9,7 +9,8 @@ var deltav;
         CtlKey[CtlKey["Brake"] = 40] = "Brake";
         CtlKey[CtlKey["Clockwise"] = 39] = "Clockwise";
         CtlKey[CtlKey["AntiClockwise"] = 37] = "AntiClockwise";
-        CtlKey[CtlKey["Fire"] = 17] = "Fire";
+        CtlKey[CtlKey["FirePrimary"] = 17] = "FirePrimary";
+        CtlKey[CtlKey["FireSecondary"] = 32] = "FireSecondary";
     })(deltav.CtlKey || (deltav.CtlKey = {}));
     var CtlKey = deltav.CtlKey;
     class Input {
