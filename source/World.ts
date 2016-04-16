@@ -7,11 +7,15 @@ namespace deltav {
         private player: Ship;
         private gcCountdown = 10;
 
+        private starTree: RTree;
+
         constructor(private logger: Logger, public width: number, public height: number) {
             super(0, height, width, 0);
 
-            for (let i = 0; i < 500; i++) {
-                this.addStaticBody(
+            this.starTree = new RTree(this);
+
+            for (let i = 0; i < 200000; i++) {
+                this.starTree.add(
                     new Star(
                         this.logger,
                         Vector.create([
@@ -21,7 +25,7 @@ namespace deltav {
                         Math.random() * 1.5));
             }
 
-            for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 500; i++) {
                 this.addStaticBody(
                     new Asteroid(
                         this.logger,
@@ -88,6 +92,10 @@ namespace deltav {
         }
 
         public render(ctx: CanvasRenderingContext2D, clip: Box) {
+            
+            // render star tree
+            this.renderBodies(this.starTree.search(clip), ctx, null);
+            
             this.renderBodies(this.staticBodies, ctx, clip);
             this.renderBodies(this.dynamicBodies, ctx, clip);
         }
@@ -173,11 +181,24 @@ namespace deltav {
         }
 
         private renderBodies(bodies: Array<Body>, ctx: CanvasRenderingContext2D, clip: Box) {
-             for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead && clip.intersects(bodies[i].getBoundingBox())) {
-                    bodies[i].render(ctx);
+
+            if (clip == null) {
+                
+                for (let i = 0; i < bodies.length; i++) {
+                    if (!bodies[i].isDead) {
+                        bodies[i].render(ctx);
+                    }
                 }
-             }
+                
+            } else {
+             
+                for (let i = 0; i < bodies.length; i++) {
+                    if (!bodies[i].isDead && clip.intersects(bodies[i].getBoundingBox())) {
+                        bodies[i].render(ctx);
+                    }
+                }
+            }
+            
         }
     }
 }

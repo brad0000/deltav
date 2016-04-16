@@ -38,7 +38,7 @@ namespace deltav {
 
     export class GattlingGun extends Weapon {
         constructor(ship: Ship) {
-            super(ship, 1, 100, 0.2);
+            super(ship, 1, 200, 0.2);
         }
 
         public makeBullet(barrel: Vector, velocity: Vector) {
@@ -70,7 +70,7 @@ namespace deltav {
 
     export class Canon extends Weapon {
         constructor(ship: Ship) {
-            super(ship, 10, 50, 1);
+            super(ship, 10, 100, 1);
         }
 
         public makeBullet(barrel: Vector, velocity: Vector) {

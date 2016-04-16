@@ -1,0 +1,40 @@
+<html>
+    <head>
+        <title>Delta V</title>
+        <link rel="stylesheet" type="text/css" href="default.css">
+        <script lang="javascript" src="dist\deltav.js"></script>
+        <script lang="javascript">
+            
+            var tree;
+            var world;
+            var mybox;
+            var mybody;
+            var mynode;
+            var searchResults;
+            
+            function start() {
+
+                world = new deltav.World(null, 100, 100);
+
+                tree = new deltav.RTree(world);
+            
+                mybody = new deltav.Body(null, Vector.create([80, 10]));
+                mybody.radius = 5;
+                
+                mynode = tree.add(mybody);    
+
+                // hit
+                mybox = new deltav.Box(10, 20, 90, 80);
+                // miss
+                // mybox = new deltav.Box(10, 20, 90, 80);
+                
+                searchResults = tree.search(mybox);
+
+            }
+        </script>
+    </head>
+    <body onload="start()">
+        <textarea id="log" style="width: 500px; height:500px">
+        </textarea>
+    </body>
+</html>

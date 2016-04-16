@@ -10,13 +10,14 @@ var deltav;
             this.staticBodies = new Array();
             this.dynamicBodies = new Array();
             this.gcCountdown = 10;
-            for (let i = 0; i < 500; i++) {
-                this.addStaticBody(new deltav.Star(this.logger, Vector.create([
+            this.starTree = new deltav.RTree(this);
+            for (let i = 0; i < 200000; i++) {
+                this.starTree.add(new deltav.Star(this.logger, Vector.create([
                     Math.random() * this.width,
                     Math.random() * this.height,
                 ]), Math.random() * 1.5));
             }
-            for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 500; i++) {
                 this.addStaticBody(new deltav.Asteroid(this.logger, Vector.create([
                     Math.random() * this.width,
                     Math.random() * this.height,
@@ -63,6 +64,7 @@ var deltav;
             }
         }
         render(ctx, clip) {
+            this.renderBodies(this.starTree.search(clip), ctx, null);
             this.renderBodies(this.staticBodies, ctx, clip);
             this.renderBodies(this.dynamicBodies, ctx, clip);
         }
@@ -130,9 +132,18 @@ var deltav;
             }
         }
         renderBodies(bodies, ctx, clip) {
-            for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead && clip.intersects(bodies[i].getBoundingBox())) {
-                    bodies[i].render(ctx);
+            if (clip == null) {
+                for (let i = 0; i < bodies.length; i++) {
+                    if (!bodies[i].isDead) {
+                        bodies[i].render(ctx);
+                    }
+                }
+            }
+            else {
+                for (let i = 0; i < bodies.length; i++) {
+                    if (!bodies[i].isDead && clip.intersects(bodies[i].getBoundingBox())) {
+                        bodies[i].render(ctx);
+                    }
                 }
             }
         }

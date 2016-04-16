@@ -35,7 +35,7 @@ var deltav;
     deltav.Weapon = Weapon;
     class GattlingGun extends Weapon {
         constructor(ship) {
-            super(ship, 1, 100, 0.2);
+            super(ship, 1, 200, 0.2);
         }
         makeBullet(barrel, velocity) {
             let geo = [
@@ -57,7 +57,7 @@ var deltav;
     deltav.GattlingGun = GattlingGun;
     class Canon extends Weapon {
         constructor(ship) {
-            super(ship, 10, 50, 1);
+            super(ship, 10, 100, 1);
         }
         makeBullet(barrel, velocity) {
             let geo = new Array();

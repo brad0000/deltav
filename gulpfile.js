@@ -69,6 +69,7 @@ gulp.task("bundle", ['compile-ts'], function() {
     
     return gulp.src([
             './source/libs/sylvester.js',
+            './source/js/rtree.js',
             './source/js/thing.js',
             './source/js/app.js',
             './source/js/body.js',

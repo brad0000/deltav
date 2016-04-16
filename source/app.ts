@@ -36,6 +36,17 @@ namespace deltav {
             this.south = this.north + this.height;
         }
 
+        public divide(): Box[] {
+            let cx = this.west + this.width / 2;
+            let cy = this.north + this.height / 2; 
+            return [
+                new Box(this.north, cy, cx, this.west),
+                new Box(this.north, cy, this.east, cx),
+                new Box(cy, this.south, cx, this.west),
+                new Box(cy, this.south, this.east, cx),  
+            ];
+        }
+
         public clamp(box: Box) {
             if (this.west < box.west) {
                 this.west = box.west;
@@ -53,6 +64,13 @@ namespace deltav {
             }
         }
 
+        public contains(other: Box): boolean {
+            return this.north < other.north
+                && this.west < other.west
+                && this.south > other.south
+                && this.east > other.east;
+        }
+        
         public intersects(other: Box): boolean {
             // check if a is totally outside b, in 2 dimensions, then negate.
             return !((this.south < other.north || this.north > other.south)

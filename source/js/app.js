@@ -31,6 +31,16 @@ var deltav;
             this.east = this.west + this.width;
             this.south = this.north + this.height;
         }
+        divide() {
+            let cx = this.west + this.width / 2;
+            let cy = this.north + this.height / 2;
+            return [
+                new Box(this.north, cy, cx, this.west),
+                new Box(this.north, cy, this.east, cx),
+                new Box(cy, this.south, cx, this.west),
+                new Box(cy, this.south, this.east, cx),
+            ];
+        }
         clamp(box) {
             if (this.west < box.west) {
                 this.west = box.west;
@@ -48,6 +58,12 @@ var deltav;
                 this.south = box.south;
                 this.north = box.south - this.height;
             }
+        }
+        contains(other) {
+            return this.north < other.north
+                && this.west < other.west
+                && this.south > other.south
+                && this.east > other.east;
         }
         intersects(other) {
             return !((this.south < other.north || this.north > other.south)
