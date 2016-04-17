@@ -1908,9 +1908,11 @@ var deltav;
             this.power = 20000;
             this.angularPower = 20000;
             this.mass = 10;
+            this.radius = 50;
             this.gattlingGun = new deltav.GattlingGun(this);
             this.canon = new deltav.Canon(this);
             this.brush = "red";
+            this.img = document.images.namedItem("hornet");
             this.velocity = Vector.create([0, 1]);
             let geo = [
                 Vector.create([-2, -3]),
@@ -1979,7 +1981,16 @@ var deltav;
                 + " a " + this.acceleration.modulus().toFixed(2);
         }
         render(ctx) {
-            super.render(ctx);
+            if (this.img == null) {
+                super.render(ctx);
+            }
+            else {
+                ctx.translate(this.getX(), this.getY());
+                ctx.rotate(this.heading);
+                ctx.drawImage(this.img, -this.radius, -this.radius, this.radius * 2, this.radius * 2);
+                ctx.rotate(-this.heading);
+                ctx.translate(-this.getX(), -this.getY());
+            }
             ctx.beginPath();
             ctx.fillStyle = "white";
             ctx.font = "10px Arial";
@@ -2240,7 +2251,7 @@ var deltav;
             this.dynamicBodyList = new Array();
             this.staticBodyTree = new deltav.RTree(this);
             this.dynamicBodyTree = new deltav.RTree(this);
-            this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
+            this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 2]));
             this.addDynamicBody(this.player);
             this.loader = new WorldLoader(logger, this);
         }

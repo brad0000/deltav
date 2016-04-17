@@ -19,7 +19,7 @@ namespace deltav {
             this.staticBodyTree = new RTree(this);
             this.dynamicBodyTree = new RTree(this);
 
-            this.player = new Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
+            this.player = new Ship(this.logger, Vector.create([this.width / 2, this.height / 2]));
             this.addDynamicBody(this.player);
 
             this.loader = new WorldLoader(logger, this);

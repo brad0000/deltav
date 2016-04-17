@@ -6,15 +6,20 @@ namespace deltav {
         protected gattlingGun: GattlingGun;
         protected canon: Canon;
 
+        protected img: HTMLImageElement;
+
         constructor(logger: Logger, position: Vector) {
             super(logger, position);
 
             this.mass = 10;
+            this.radius = 50;
 
             this.gattlingGun = new GattlingGun(this);
             this.canon = new Canon(this);
 
             this.brush = "red";
+
+            this.img = <HTMLImageElement>document.images.namedItem("hornet");
 
             this.velocity = Vector.create([0, 1]);
 
@@ -111,7 +116,22 @@ namespace deltav {
         }
 
         public render(ctx: CanvasRenderingContext2D) {
-            super.render(ctx);
+            
+            if (this.img == null) {
+                super.render(ctx);
+            } else {
+                
+                // supposedly these are expensive:
+                // ctx.save();
+                // ctx.restore();
+                
+                ctx.translate(this.getX(), this.getY());
+                ctx.rotate(this.heading);
+                ctx.drawImage(this.img, -this.radius, -this.radius, this.radius * 2, this.radius * 2);
+                ctx.rotate(-this.heading);
+                ctx.translate(-this.getX(), -this.getY());
+                
+            }
 
             // if  (this.velocity.modulus() > 0.5) {
             //     ctx.beginPath();
