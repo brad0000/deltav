@@ -6,6 +6,7 @@ var deltav;
             this.radius = radius;
         }
         update(time, world, input) {
+            return false;
         }
         render(ctx) {
             ctx.beginPath();

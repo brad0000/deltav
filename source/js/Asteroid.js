@@ -18,8 +18,9 @@ var deltav;
             this.setGeometry(geo);
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             this.heading += this.rotationSpeed / time;
+            return moved;
         }
         render(ctx) {
             super.render(ctx);

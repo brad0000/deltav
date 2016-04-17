@@ -84,7 +84,7 @@ var deltav;
             this.setGeometry(geometry);
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            return super.update(time, world, input);
         }
         render(ctx) {
             super.render(ctx);

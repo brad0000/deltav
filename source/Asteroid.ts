@@ -24,9 +24,10 @@ namespace deltav {
             this.setGeometry(geo);
         }
 
-        public update(time: number, world: World, input: Input) {
-            super.update(time, world, input);
+        public update(time: number, world: World, input: Input): boolean {
+            let moved = super.update(time, world, input);
             this.heading += this.rotationSpeed / time;
+            return moved;
         }
 
         public render(ctx: CanvasRenderingContext2D) {

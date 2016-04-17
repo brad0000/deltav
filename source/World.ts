@@ -2,18 +2,22 @@ namespace deltav {
 
     export class World extends Box {
         public drag = -0.9;
-        private staticBodies = new Array<Body>();
-        private dynamicBodies = new Array<Body>();
         private player: Ship;
         private gcCountdown = 10;
 
-        private starTree: RTree;
         private loader: WorldLoader;
+        
+        private staticBodyTree: RTree;
+        private staticBodyList = new Array<Body>();
+        
+        private dynamicBodyTree: RTree;
+        private dynamicBodyList = new Array<Body>();
 
         constructor(private logger: Logger, public width: number, public height: number) {
             super(0, height, width, 0);
 
-            this.starTree = new RTree(this);
+            this.staticBodyTree = new RTree(this);
+            this.dynamicBodyTree = new RTree(this);
 
             this.player = new Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
             this.addDynamicBody(this.player);
@@ -22,11 +26,17 @@ namespace deltav {
         }
 
         public addStaticBody(body: Body) {
-            this.staticBodies.push(body);
+            body.tag = this.staticBodyList.length; 
+            this.staticBodyList[body.tag] = body;
+
+            this.staticBodyTree.add(body);
         }
 
         public addDynamicBody(body: Body) {
-            this.dynamicBodies.push(body);
+            body.tag = this.dynamicBodyList.length; 
+            this.dynamicBodyList[body.tag] = body;
+            
+            this.dynamicBodyTree.add(body);
         }
 
         public update(time: number, input: IInput) {
@@ -37,15 +47,22 @@ namespace deltav {
             // collision detection
             let skipHashset: { [id: string]: boolean; } = {};
             let a, b: Body;
-            for (let i = 0; i < this.dynamicBodies.length; i++) {
-                a = this.dynamicBodies[i];
-                for (let j = 0; j < this.dynamicBodies.length; j++) {
-                    if (i !== j || skipHashset[i + "," + j] === true) {
+            let nearbyBodies: Array<Body>;
+            for (let i = 0; i < this.dynamicBodyList.length; i++) {
+                a = this.dynamicBodyList[i];
+                
+                // Find all dynamicBodies in the vicinity, this will include body a.
+                nearbyBodies = this.dynamicBodyTree.search(a.getBoundingBox().scale(10, 10));
+                
+                for (let j = 0; j < nearbyBodies.length; j++) {
+                    // get body b
+                    b = nearbyBodies[j];
+                    
+                    // Don't check for collisions between a body and itself, or between a two bodies
+                    // that we've already checked. 
+                    if (a.tag !== b.tag && !skipHashset[a.tag + "," + b.tag]) {
                         // flag not to check the inverse
-                        skipHashset[j + "," + i] = true;
-
-                        // get body b
-                        b = this.dynamicBodies[j];
+                        skipHashset[b.tag + "," + a.tag] = true;
 
                         // check for collisions
                         if (this.intersect(a, b)) {
@@ -56,21 +73,18 @@ namespace deltav {
             }
 
             if (this.gcCountdown < 0) {
-                this.updateBodiesWithGC(this.staticBodies, time, input);
-                this.updateBodiesWithGC(this.dynamicBodies, time, input);
+                this.updateBodiesWithGC(this.dynamicBodyList, this.dynamicBodyTree, time, input);
+                this.updateBodiesWithGC(this.staticBodyList, this.staticBodyTree, time, input);
+                this.gcCountdown = 10;
             } else {
-                this.updateBodies(this.staticBodies, time, input);
-                this.updateBodies(this.dynamicBodies, time, input);
+                this.updateBodies(this.dynamicBodyList, this.dynamicBodyTree, time, input);
+                this.updateBodies(this.staticBodyList, this.staticBodyTree, time, input);
             }
         }
 
         public render(ctx: CanvasRenderingContext2D, clip: Box) {
-            
-            // render star tree
-            this.renderBodies(this.starTree.search(clip), ctx, null);
-            
-            this.renderBodies(this.staticBodies, ctx, clip);
-            this.renderBodies(this.dynamicBodies, ctx, clip);
+            this.renderBodies(this.staticBodyTree.search(clip), ctx, null);
+            this.renderBodies(this.dynamicBodyTree.search(clip), ctx, null);
         }
 
         public getPlayerPosition() {
@@ -78,7 +92,7 @@ namespace deltav {
         }
 
         public addStar(star: Body) {
-            this.starTree.add(star);
+            this.staticBodyTree.add(star);
         }
 
         private handleCollision(a: Body, b: Body) {
@@ -138,21 +152,32 @@ namespace deltav {
             }
         }
 
-        private updateBodiesWithGC(bodies: Array<Body>, time: number, input: IInput) {
-            let old = bodies;
-            bodies = [];
-            for (let i = 0; i < old.length; i++) {
-                if (!old[i].isDead) {
-                    old[i].update(time, this, input);
-                    bodies.push(old[i]);
+        private updateBodiesWithGC(bodies: Array<Body>, bodyTree: RTree, time: number, input: IInput) {
+            let body: Body;
+            for (let i = 0; i < bodies.length; i++) {
+                body = bodies[i];
+                if (body.isDead) {
+                    bodies.splice(i, 1);
+                    bodyTree.remove(body);
+                    i--;
+                } else {
+                    if (body.update(time, this, input)) {
+                        bodyTree.remove(body);
+                        bodyTree.add(body);
+                    }
                 }
             }
         }
 
-        private updateBodies(bodies: Array<Body>, time: number, input: IInput) {
+        private updateBodies(bodies: Array<Body>, bodyTree: RTree, time: number, input: IInput) {
+            let body: Body;
             for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead) {
-                    bodies[i].update(time, this, input);
+                body = bodies[i];
+                if (!body.isDead) {
+                    if (body.update(time, this, input)) {
+                        bodyTree.remove(body);
+                        bodyTree.add(body);
+                    }
                 }
             }
         }
@@ -210,15 +235,15 @@ namespace deltav {
                         Math.random() * 30));
             }
 
-            for (let i = 0; i < 100; i++) {
-                this.world.addDynamicBody(
-                    new Drone(
-                        this.logger,
-                        Vector.create([
-                            Math.random() * this.world.width,
-                            Math.random() * this.world.height,
-                        ])));
-            }
+            // for (let i = 0; i < 10; i++) {
+            //     this.world.addDynamicBody(
+            //         new Drone(
+            //             this.logger,
+            //             Vector.create([
+            //                 Math.random() * this.world.width,
+            //                 Math.random() * this.world.height,
+            //             ])));
+            // }
             
         }
         

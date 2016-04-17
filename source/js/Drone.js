@@ -8,7 +8,7 @@ var deltav;
         }
         update(time, world, input) {
             let aiInput = this.pilot.update(time, world);
-            super.update(time, world, aiInput);
+            return super.update(time, world, aiInput);
         }
         render(ctx) {
             super.render(ctx);
@@ -169,6 +169,9 @@ var deltav;
         }
         isDown(key) {
             return this.pressed[key];
+        }
+        rate(key) {
+            return 1;
         }
         set(key, value) {
             this.pressed[key] = value;

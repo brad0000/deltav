@@ -3,6 +3,7 @@ namespace deltav {
     export class RTree {
 
         private root: RTreeNode;
+        private nodesByBodyTag: { [i: number]: Array<RTreeNode> };
 
         constructor(world: World) {
             
@@ -10,6 +11,7 @@ namespace deltav {
             let iNode: RTreeNode, jNode: RTreeNode, kNode: RTreeNode, lNode: RTreeNode, mNode: RTreeNode;
             
             this.root = new RTreeNode(world, false, false);
+            this.nodesByBodyTag = { };
 
             iBoxes = world.divide();
             for (let i = 0; i < iBoxes.length; i++) {
@@ -47,14 +49,21 @@ namespace deltav {
         }
 
         public add(body: Body): RTreeNode {
-            return this.root.add(body);
+            this.nodesByBodyTag[body.tag] = [];
+            return this.root.add(body, this.nodesByBodyTag[body.tag]);
+        }
+        
+        public remove(body: Body) {
+            let nodes = this.nodesByBodyTag[body.tag];
+            
+            for (let i = 0; i < nodes.length; i++) {
+                nodes[i].remove();
+            }
         }
         
         public search(box: Box): Body[] {
             let hits = new Array<Body>();
-            
             this.root.search(box, hits);
-            
             return hits;
         }
     }
@@ -62,8 +71,12 @@ namespace deltav {
     export class RTreeNode {
         public children = new Array<RTreeNode>();
         public body: Body;
+        private parent: RTreeNode;
         
-        constructor(public box: Box, public isLastBranch, public isLeaf: boolean) {
+        constructor(
+            public box: Box,
+            public isLastBranch, 
+            public isLeaf: boolean) {
             // nothing
         }
         
@@ -84,7 +97,7 @@ namespace deltav {
             }   
         }
         
-        public add(body: Body) {
+        public add(body: Body, resultingNodes: Array<RTreeNode>) {
             if (this.isLeaf) {
                 // this node IS a star, don't add stars to stars.
                 return null;
@@ -93,16 +106,31 @@ namespace deltav {
                 if (this.box.intersects(body.getBoundingBox())) {
                     let result = new RTreeNode(body.getBoundingBox(), false, true);
                     result.body = body;
-                    this.children.push(result);
+                    result.addToParent(this);
+                    
+                    resultingNodes.push(result);
                 }
             } else {
                 // this is an internal branch, just check to see if it's worth notifying children.
                 if (this.box.intersects(body.getBoundingBox())) {
                     for (let i = 0; i < this.children.length; i++) {
-                        this.children[i].add(body);
+                        this.children[i].add(body, resultingNodes);
                     }
                 }
             }
+        }
+        
+        public addToParent(parent: RTreeNode) {
+            this.parent = parent;
+            parent.children.push(this);
+        }
+
+        public remove() {
+            this.parent.removeChild(this);
+        }
+        
+        public removeChild(child: RTreeNode) {
+            this.children.splice(this.children.indexOf(child), 1);
         }
     }
 }

@@ -5,6 +5,7 @@ var deltav;
             let iBoxes, jBoxes, kBoxes, lBoxes, mBoxes;
             let iNode, jNode, kNode, lNode, mNode;
             this.root = new RTreeNode(world, false, false);
+            this.nodesByBodyTag = {};
             iBoxes = world.divide();
             for (let i = 0; i < iBoxes.length; i++) {
                 iNode = new RTreeNode(iBoxes[i], false, false);
@@ -32,7 +33,14 @@ var deltav;
             }
         }
         add(body) {
-            return this.root.add(body);
+            this.nodesByBodyTag[body.tag] = [];
+            return this.root.add(body, this.nodesByBodyTag[body.tag]);
+        }
+        remove(body) {
+            let nodes = this.nodesByBodyTag[body.tag];
+            for (let i = 0; i < nodes.length; i++) {
+                nodes[i].remove();
+            }
         }
         search(box) {
             let hits = new Array();
@@ -65,7 +73,7 @@ var deltav;
                 }
             }
         }
-        add(body) {
+        add(body, resultingNodes) {
             if (this.isLeaf) {
                 return null;
             }
@@ -73,16 +81,27 @@ var deltav;
                 if (this.box.intersects(body.getBoundingBox())) {
                     let result = new RTreeNode(body.getBoundingBox(), false, true);
                     result.body = body;
-                    this.children.push(result);
+                    result.addToParent(this);
+                    resultingNodes.push(result);
                 }
             }
             else {
                 if (this.box.intersects(body.getBoundingBox())) {
                     for (let i = 0; i < this.children.length; i++) {
-                        this.children[i].add(body);
+                        this.children[i].add(body, resultingNodes);
                     }
                 }
             }
+        }
+        addToParent(parent) {
+            this.parent = parent;
+            parent.children.push(this);
+        }
+        remove() {
+            this.parent.removeChild(this);
+        }
+        removeChild(child) {
+            this.children.splice(this.children.indexOf(child), 1);
         }
     }
     deltav.RTreeNode = RTreeNode;

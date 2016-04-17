@@ -8,9 +8,9 @@ namespace deltav {
             this.brush = "blue";
         }
 
-        public update(time: number, world: World, input: IInput) {
+        public update(time: number, world: World, input: IInput): boolean {
             let aiInput = this.pilot.update(time, world);
-            super.update(time, world, aiInput);
+            return super.update(time, world, aiInput);
         }
 
         public render(ctx: CanvasRenderingContext2D) {
@@ -192,6 +192,10 @@ namespace deltav {
 
         public isDown(key: CtlKey): boolean {
             return this.pressed[key];
+        }
+
+        public rate(key: CtlKey): number {
+            return 1;
         }
 
         public set(key: CtlKey, value: boolean) {

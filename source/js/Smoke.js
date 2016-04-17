@@ -7,7 +7,7 @@ var deltav;
             this.radius = radius * .75;
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             world.addStaticBody(new Smoke(this.logger, this.position, this.velocity.add([
                 Math.random() * 100,
                 Math.random() * 100,
@@ -16,6 +16,7 @@ var deltav;
             if (this.radius < 0.5) {
                 this.isDead = true;
             }
+            return moved;
         }
         render(ctx) {
         }
@@ -43,12 +44,13 @@ var deltav;
             this.deltaRadius = this.radius / 2;
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             this.radius += this.deltaRadius;
             this.opacity -= 0.1;
             if (this.opacity < 0) {
                 this.isDead = true;
             }
+            return moved;
         }
         render(ctx) {
             ctx.beginPath();

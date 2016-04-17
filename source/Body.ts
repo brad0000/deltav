@@ -3,6 +3,8 @@ namespace deltav {
         public logger: Logger;
 
         public isDead = false;
+        public tag: number;
+        
         protected health = 1;
 
         protected mass = 5;
@@ -27,13 +29,13 @@ namespace deltav {
         public getX() { return this.position.e(1); }
         public getY() { return this.position.e(2); }
 
-        public getP() { return this.position.dup(); }
-        public getV() { return this.velocity.dup(); }
+        public getP() { return this.position; }
+        public getV() { return this.velocity; }
 
         public getH() { return this.heading; }
         public getR() { return this.radius; }
 
-        public getCollisionBox() {
+        public getCollisionBox(): Box {
             let p = this.position.elements;
             return new Box(
                 p[1] - this.collisionRadius,
@@ -42,7 +44,7 @@ namespace deltav {
                 p[0] - this.collisionRadius);
         }
 
-        public getBoundingBox() {
+        public getBoundingBox(): Box {
             if (this.boundingBox == null) {
                 let p = this.position.elements;
                 this.boundingBox = new Box(
@@ -54,22 +56,15 @@ namespace deltav {
             return this.boundingBox;
         }
 
-
-        public update(time: number, world: World, input: IInput) {
+        /*
+         * Update the body, and return whether or not the body moved. 
+         */
+        public update(time: number, world: World, input: IInput): boolean {
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
             this.boundingBox = null;
-            // if (this.health < 1) {
-            //     world.addStaticBody(
-            //         new Smoke(
-            //             this.logger,
-            //             this.position,
-            //             this.velocity.add([
-            //                 Math.random() * 100,
-            //                 Math.random() * 100,
-            //             ]),
-            //             5));
-            // }
+            
+            return !this.velocity.eql([0, 0]);
         }
 
         public render(ctx: CanvasRenderingContext2D) {

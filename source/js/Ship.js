@@ -4,8 +4,8 @@ var deltav;
         constructor(logger, position) {
             super(logger, position);
             this.power = 20000;
-            this.angularPower = 40;
-            this.mass = 20;
+            this.angularPower = 20000;
+            this.mass = 10;
             this.gattlingGun = new deltav.GattlingGun(this);
             this.canon = new deltav.Canon(this);
             this.brush = "red";
@@ -30,7 +30,7 @@ var deltav;
             this.setGeometry(geo);
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             let speed = this.velocity.modulus();
             if (speed > 1) {
                 this.heading = this.velocity.toAngle();
@@ -44,29 +44,31 @@ var deltav;
                 this.canon.fire(world, this.position, this.velocity);
             }
             let force = Vector.Zero(2);
+            let directionVector = Vector.create([1, 0]).rotate(this.heading, Vector.Zero(2));
             if (input.isDown(deltav.CtlKey.Accelerate)) {
-                if (this.velocity.eql(Vector.Zero(2))) {
-                    this.velocity.setElements([0, -0.1]);
-                }
-                force = force.add(this.velocity.toUnitVector().multiply(this.power));
+                let throttle = input.rate(deltav.CtlKey.Accelerate);
+                force = force.add(directionVector.multiply(throttle * this.power));
                 let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
                 world.addStaticBody(new deltav.Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
             }
             else if (input.isDown(deltav.CtlKey.Brake)) {
-                force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
+                let brake = input.rate(deltav.CtlKey.Brake);
+                force = force.add(directionVector.multiply(-1).multiply(brake * this.power));
             }
             this.acceleration = force.divide(this.mass).multiply(time);
             let veerRight = input.isDown(deltav.CtlKey.Clockwise);
             let veerLeft = input.isDown(deltav.CtlKey.AntiClockwise);
             let rotation = null;
             if (veerRight || veerLeft) {
+                let rate = input.rate(veerLeft ? deltav.CtlKey.AntiClockwise : deltav.CtlKey.Clockwise);
                 rotation = this.velocity
                     .rotate(Math.PI / 2 * (veerRight ? 1 : -1), Vector.Zero(2))
                     .toUnitVector()
-                    .multiply(this.scaleAngularPower(speed))
+                    .multiply(this.angularPower * rate)
                     .multiply(time);
                 this.acceleration = this.acceleration.add(rotation);
             }
+            return moved;
         }
         report() {
             return "p " + this.fv(this.position, 0)
@@ -85,9 +87,6 @@ var deltav;
         recentlyFired(bullet) {
             return this.gattlingGun.recentlyFired(bullet)
                 || this.canon.recentlyFired(bullet);
-        }
-        scaleAngularPower(speed) {
-            return this.angularPower * speed;
         }
         fh(rad) {
             let deg = rad * 180 / Math.PI;

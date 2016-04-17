@@ -7,8 +7,8 @@ namespace deltav {
             this.radius = radius * .75;
         }
 
-        public update(time: number, world: World, input: Input) {
-            super.update(time, world, input);
+        public update(time: number, world: World, input: Input): boolean {
+            let moved = super.update(time, world, input);
 
             world.addStaticBody(
                 new Smoke(
@@ -25,6 +25,8 @@ namespace deltav {
             if (this.radius < 0.5) {
                 this.isDead = true;
             }
+            
+            return moved;
         }
 
         public render(ctx: CanvasRenderingContext2D) {
@@ -59,14 +61,16 @@ namespace deltav {
             this.deltaRadius = this.radius / 2;
         }
 
-        public update(time: number, world: World, input: Input) {
-            super.update(time, world, input);
+        public update(time: number, world: World, input: Input): boolean {
+            let moved = super.update(time, world, input);
             this.radius += this.deltaRadius;
             this.opacity -= 0.1;
 
             if (this.opacity < 0) {
                 this.isDead = true;
             }
+            
+            return moved;
         }
 
         public render(ctx: CanvasRenderingContext2D) {

@@ -1277,6 +1277,7 @@ var deltav;
             let iBoxes, jBoxes, kBoxes, lBoxes, mBoxes;
             let iNode, jNode, kNode, lNode, mNode;
             this.root = new RTreeNode(world, false, false);
+            this.nodesByBodyTag = {};
             iBoxes = world.divide();
             for (let i = 0; i < iBoxes.length; i++) {
                 iNode = new RTreeNode(iBoxes[i], false, false);
@@ -1304,7 +1305,14 @@ var deltav;
             }
         }
         add(body) {
-            return this.root.add(body);
+            this.nodesByBodyTag[body.tag] = [];
+            return this.root.add(body, this.nodesByBodyTag[body.tag]);
+        }
+        remove(body) {
+            let nodes = this.nodesByBodyTag[body.tag];
+            for (let i = 0; i < nodes.length; i++) {
+                nodes[i].remove();
+            }
         }
         search(box) {
             let hits = new Array();
@@ -1337,7 +1345,7 @@ var deltav;
                 }
             }
         }
-        add(body) {
+        add(body, resultingNodes) {
             if (this.isLeaf) {
                 return null;
             }
@@ -1345,16 +1353,27 @@ var deltav;
                 if (this.box.intersects(body.getBoundingBox())) {
                     let result = new RTreeNode(body.getBoundingBox(), false, true);
                     result.body = body;
-                    this.children.push(result);
+                    result.addToParent(this);
+                    resultingNodes.push(result);
                 }
             }
             else {
                 if (this.box.intersects(body.getBoundingBox())) {
                     for (let i = 0; i < this.children.length; i++) {
-                        this.children[i].add(body);
+                        this.children[i].add(body, resultingNodes);
                     }
                 }
             }
+        }
+        addToParent(parent) {
+            this.parent = parent;
+            parent.children.push(this);
+        }
+        remove() {
+            this.parent.removeChild(this);
+        }
+        removeChild(child) {
+            this.children.splice(this.children.indexOf(child), 1);
         }
     }
     deltav.RTreeNode = RTreeNode;
@@ -1421,6 +1440,11 @@ var deltav;
                 new Box(cy, this.south, this.east, cx),
             ];
         }
+        scale(sx, sy) {
+            let cx = this.west + this.width / 2;
+            let cy = this.north + this.height / 2;
+            return new Box(cy - this.height / 2 * sy, cy + this.height / 2 * sy, cx + this.width / 2 * sx, cx - this.width / 2 * sx);
+        }
         clamp(box) {
             if (this.west < box.west) {
                 this.west = box.west;
@@ -1474,8 +1498,8 @@ var deltav;
         }
         getX() { return this.position.e(1); }
         getY() { return this.position.e(2); }
-        getP() { return this.position.dup(); }
-        getV() { return this.velocity.dup(); }
+        getP() { return this.position; }
+        getV() { return this.velocity; }
         getH() { return this.heading; }
         getR() { return this.radius; }
         getCollisionBox() {
@@ -1493,6 +1517,7 @@ var deltav;
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
             this.boundingBox = null;
+            return !this.velocity.eql([0, 0]);
         }
         render(ctx) {
             ctx.fillStyle = this.brush;
@@ -1532,6 +1557,7 @@ var deltav;
             this.radius = radius;
         }
         update(time, world, input) {
+            return false;
         }
         render(ctx) {
             ctx.beginPath();
@@ -1554,7 +1580,7 @@ var deltav;
             this.radius = radius * .75;
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             world.addStaticBody(new Smoke(this.logger, this.position, this.velocity.add([
                 Math.random() * 100,
                 Math.random() * 100,
@@ -1563,6 +1589,7 @@ var deltav;
             if (this.radius < 0.5) {
                 this.isDead = true;
             }
+            return moved;
         }
         render(ctx) {
         }
@@ -1590,12 +1617,13 @@ var deltav;
             this.deltaRadius = this.radius / 2;
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             this.radius += this.deltaRadius;
             this.opacity -= 0.1;
             if (this.opacity < 0) {
                 this.isDead = true;
             }
+            return moved;
         }
         render(ctx) {
             ctx.beginPath();
@@ -1621,6 +1649,11 @@ var deltav;
     class Client {
         constructor(canvas, logArea) {
             this.clock = 0;
+            this.lastLoopDuration = 0;
+            this.lastUpdateDuration = 0;
+            this.lastRenderDuration = 0;
+            this.lastUpdateTime = Date.now();
+            this.lastTimeElapsed = 0;
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
             this.logger = new deltav.Logger(logArea);
@@ -1628,13 +1661,19 @@ var deltav;
             this.view = new View(this.logger, canvas.width, canvas.height, this.world);
             this.input = new deltav.Input(canvas, document);
             this.ctx = canvas.getContext("2d");
-            this.startGameLoop();
+            requestAnimationFrame(() => this.gameLoop());
         }
-        startGameLoop() {
-            setInterval(() => {
-                this.updateWorld(0.033);
-                this.renderWorld();
-            }, 30);
+        gameLoop() {
+            requestAnimationFrame(() => this.gameLoop());
+            let now = Date.now();
+            this.lastTimeElapsed = now - this.lastUpdateTime;
+            this.updateWorld(this.lastTimeElapsed / 1000);
+            this.lastUpdateDuration = Date.now() - now;
+            this.lastUpdateTime = now;
+            let renderStart = Date.now();
+            this.renderWorld();
+            this.lastRenderDuration = Date.now() - renderStart;
+            this.lastLoopDuration = Date.now() - now;
         }
         updateWorld(time) {
             this.clock += time;
@@ -1643,6 +1682,12 @@ var deltav;
         }
         renderWorld() {
             this.view.render(this.ctx);
+            this.ctx.strokeStyle = "white";
+            this.ctx.strokeText("last elapsed: " + this.lastTimeElapsed, 20, 20);
+            this.ctx.strokeText("last loop: " + this.lastLoopDuration, 20, 40);
+            this.ctx.strokeText("last update: " + this.lastUpdateDuration, 20, 60);
+            this.ctx.strokeText("last render: " + this.lastRenderDuration, 20, 80);
+            this.ctx.stroke();
         }
     }
     deltav.Client = Client;
@@ -1693,9 +1738,50 @@ var deltav;
             canvas.addEventListener("mousewheel", ev => this.wheel(ev));
             doc.addEventListener("keydown", ev => this.keyDown(ev));
             doc.addEventListener("keyup", ev => this.keyUp(ev));
+            window.addEventListener("gamepadconnected", ev => this.gamePadOn(ev));
+            window.addEventListener("gamepaddisconnected", ev => this.gamePadOff(ev));
         }
         isDown(key) {
-            return this.pressed[key];
+            let gamepad = navigator.getGamepads()[0];
+            if (gamepad == null) {
+                return this.pressed[key];
+            }
+            else {
+                return this.gamepadIsKeyDown(gamepad, key);
+            }
+        }
+        rate(key) {
+            let gamepad = navigator.getGamepads()[0];
+            if (gamepad == null) {
+                return 1;
+            }
+            else {
+                return this.gamepadRate(gamepad, key);
+            }
+        }
+        gamepadRate(gamepad, key) {
+            switch (key) {
+                case CtlKey.Accelerate: return -Math.min(gamepad.axes[1], 0);
+                case CtlKey.Brake: return Math.max(gamepad.axes[1], 0);
+                case CtlKey.AntiClockwise: return -Math.min(gamepad.axes[0], 0);
+                case CtlKey.Clockwise: return Math.max(gamepad.axes[0], 0);
+            }
+        }
+        gamepadIsKeyDown(gamepad, key) {
+            switch (key) {
+                case CtlKey.FirePrimary: return gamepad.buttons[0].pressed;
+                case CtlKey.FireSecondary: return gamepad.buttons[1].pressed;
+                case CtlKey.Accelerate: return this.gamepadRate(gamepad, key) > 0.1;
+                case CtlKey.Brake: return this.gamepadRate(gamepad, key) > 0.1;
+                case CtlKey.AntiClockwise: return this.gamepadRate(gamepad, key) > 0.2;
+                case CtlKey.Clockwise: return this.gamepadRate(gamepad, key) > 0.2;
+            }
+        }
+        gamePadOn(ev) {
+            console.log("Gamepad connected at index %d: %s. %d buttons, %d axes.", ev.gamepad.index, ev.gamepad.id, ev.gamepad.buttons.length, ev.gamepad.axes.length);
+        }
+        gamePadOff(ev) {
+            console.log("Gamepad disconnected from index %d: %s", ev.gamepad.index, ev.gamepad.id);
         }
         keyUp(ev) {
             this.pressed[ev.keyCode] = false;
@@ -1800,7 +1886,7 @@ var deltav;
             this.setGeometry(geometry);
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            return super.update(time, world, input);
         }
         render(ctx) {
             super.render(ctx);
@@ -1820,8 +1906,8 @@ var deltav;
         constructor(logger, position) {
             super(logger, position);
             this.power = 20000;
-            this.angularPower = 40;
-            this.mass = 20;
+            this.angularPower = 20000;
+            this.mass = 10;
             this.gattlingGun = new deltav.GattlingGun(this);
             this.canon = new deltav.Canon(this);
             this.brush = "red";
@@ -1846,7 +1932,7 @@ var deltav;
             this.setGeometry(geo);
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             let speed = this.velocity.modulus();
             if (speed > 1) {
                 this.heading = this.velocity.toAngle();
@@ -1860,29 +1946,31 @@ var deltav;
                 this.canon.fire(world, this.position, this.velocity);
             }
             let force = Vector.Zero(2);
+            let directionVector = Vector.create([1, 0]).rotate(this.heading, Vector.Zero(2));
             if (input.isDown(deltav.CtlKey.Accelerate)) {
-                if (this.velocity.eql(Vector.Zero(2))) {
-                    this.velocity.setElements([0, -0.1]);
-                }
-                force = force.add(this.velocity.toUnitVector().multiply(this.power));
+                let throttle = input.rate(deltav.CtlKey.Accelerate);
+                force = force.add(directionVector.multiply(throttle * this.power));
                 let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
                 world.addStaticBody(new deltav.Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
             }
             else if (input.isDown(deltav.CtlKey.Brake)) {
-                force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
+                let brake = input.rate(deltav.CtlKey.Brake);
+                force = force.add(directionVector.multiply(-1).multiply(brake * this.power));
             }
             this.acceleration = force.divide(this.mass).multiply(time);
             let veerRight = input.isDown(deltav.CtlKey.Clockwise);
             let veerLeft = input.isDown(deltav.CtlKey.AntiClockwise);
             let rotation = null;
             if (veerRight || veerLeft) {
+                let rate = input.rate(veerLeft ? deltav.CtlKey.AntiClockwise : deltav.CtlKey.Clockwise);
                 rotation = this.velocity
                     .rotate(Math.PI / 2 * (veerRight ? 1 : -1), Vector.Zero(2))
                     .toUnitVector()
-                    .multiply(this.scaleAngularPower(speed))
+                    .multiply(this.angularPower * rate)
                     .multiply(time);
                 this.acceleration = this.acceleration.add(rotation);
             }
+            return moved;
         }
         report() {
             return "p " + this.fv(this.position, 0)
@@ -1901,9 +1989,6 @@ var deltav;
         recentlyFired(bullet) {
             return this.gattlingGun.recentlyFired(bullet)
                 || this.canon.recentlyFired(bullet);
-        }
-        scaleAngularPower(speed) {
-            return this.angularPower * speed;
         }
         fh(rad) {
             let deg = rad * 180 / Math.PI;
@@ -1929,7 +2014,7 @@ var deltav;
         }
         update(time, world, input) {
             let aiInput = this.pilot.update(time, world);
-            super.update(time, world, aiInput);
+            return super.update(time, world, aiInput);
         }
         render(ctx) {
             super.render(ctx);
@@ -2091,6 +2176,9 @@ var deltav;
         isDown(key) {
             return this.pressed[key];
         }
+        rate(key) {
+            return 1;
+        }
         set(key, value) {
             this.pressed[key] = value;
         }
@@ -2125,8 +2213,9 @@ var deltav;
             this.setGeometry(geo);
         }
         update(time, world, input) {
-            super.update(time, world, input);
+            let moved = super.update(time, world, input);
             this.heading += this.rotationSpeed / time;
+            return moved;
         }
         render(ctx) {
             super.render(ctx);
@@ -2146,31 +2235,38 @@ var deltav;
             this.width = width;
             this.height = height;
             this.drag = -0.9;
-            this.staticBodies = new Array();
-            this.dynamicBodies = new Array();
             this.gcCountdown = 10;
-            this.starTree = new deltav.RTree(this);
+            this.staticBodyList = new Array();
+            this.dynamicBodyList = new Array();
+            this.staticBodyTree = new deltav.RTree(this);
+            this.dynamicBodyTree = new deltav.RTree(this);
             this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
             this.addDynamicBody(this.player);
             this.loader = new WorldLoader(logger, this);
         }
         addStaticBody(body) {
-            this.staticBodies.push(body);
+            body.tag = this.staticBodyList.length;
+            this.staticBodyList[body.tag] = body;
+            this.staticBodyTree.add(body);
         }
         addDynamicBody(body) {
-            this.dynamicBodies.push(body);
+            body.tag = this.dynamicBodyList.length;
+            this.dynamicBodyList[body.tag] = body;
+            this.dynamicBodyTree.add(body);
         }
         update(time, input) {
             this.gcCountdown -= time;
             this.loader.update(time);
             let skipHashset = {};
             let a, b;
-            for (let i = 0; i < this.dynamicBodies.length; i++) {
-                a = this.dynamicBodies[i];
-                for (let j = 0; j < this.dynamicBodies.length; j++) {
-                    if (i !== j || skipHashset[i + "," + j] === true) {
-                        skipHashset[j + "," + i] = true;
-                        b = this.dynamicBodies[j];
+            let nearbyBodies;
+            for (let i = 0; i < this.dynamicBodyList.length; i++) {
+                a = this.dynamicBodyList[i];
+                nearbyBodies = this.dynamicBodyTree.search(a.getBoundingBox().scale(10, 10));
+                for (let j = 0; j < nearbyBodies.length; j++) {
+                    b = nearbyBodies[j];
+                    if (a.tag !== b.tag && !skipHashset[a.tag + "," + b.tag]) {
+                        skipHashset[b.tag + "," + a.tag] = true;
                         if (this.intersect(a, b)) {
                             this.handleCollision(a, b);
                         }
@@ -2178,24 +2274,24 @@ var deltav;
                 }
             }
             if (this.gcCountdown < 0) {
-                this.updateBodiesWithGC(this.staticBodies, time, input);
-                this.updateBodiesWithGC(this.dynamicBodies, time, input);
+                this.updateBodiesWithGC(this.dynamicBodyList, this.dynamicBodyTree, time, input);
+                this.updateBodiesWithGC(this.staticBodyList, this.staticBodyTree, time, input);
+                this.gcCountdown = 10;
             }
             else {
-                this.updateBodies(this.staticBodies, time, input);
-                this.updateBodies(this.dynamicBodies, time, input);
+                this.updateBodies(this.dynamicBodyList, this.dynamicBodyTree, time, input);
+                this.updateBodies(this.staticBodyList, this.staticBodyTree, time, input);
             }
         }
         render(ctx, clip) {
-            this.renderBodies(this.starTree.search(clip), ctx, null);
-            this.renderBodies(this.staticBodies, ctx, clip);
-            this.renderBodies(this.dynamicBodies, ctx, clip);
+            this.renderBodies(this.staticBodyTree.search(clip), ctx, null);
+            this.renderBodies(this.dynamicBodyTree.search(clip), ctx, null);
         }
         getPlayerPosition() {
             return this.player.getP();
         }
         addStar(star) {
-            this.starTree.add(star);
+            this.staticBodyTree.add(star);
         }
         handleCollision(a, b) {
             let isADead = a.collide(b);
@@ -2240,20 +2336,32 @@ var deltav;
                 return false;
             }
         }
-        updateBodiesWithGC(bodies, time, input) {
-            let old = bodies;
-            bodies = [];
-            for (let i = 0; i < old.length; i++) {
-                if (!old[i].isDead) {
-                    old[i].update(time, this, input);
-                    bodies.push(old[i]);
+        updateBodiesWithGC(bodies, bodyTree, time, input) {
+            let body;
+            for (let i = 0; i < bodies.length; i++) {
+                body = bodies[i];
+                if (body.isDead) {
+                    bodies.splice(i, 1);
+                    bodyTree.remove(body);
+                    i--;
+                }
+                else {
+                    if (body.update(time, this, input)) {
+                        bodyTree.remove(body);
+                        bodyTree.add(body);
+                    }
                 }
             }
         }
-        updateBodies(bodies, time, input) {
+        updateBodies(bodies, bodyTree, time, input) {
+            let body;
             for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead) {
-                    bodies[i].update(time, this, input);
+                body = bodies[i];
+                if (!body.isDead) {
+                    if (body.update(time, this, input)) {
+                        bodyTree.remove(body);
+                        bodyTree.add(body);
+                    }
                 }
             }
         }
@@ -2293,12 +2401,6 @@ var deltav;
                     Math.random() * this.world.width,
                     Math.random() * this.world.height,
                 ]), Math.random() * 30));
-            }
-            for (let i = 0; i < 100; i++) {
-                this.world.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
-                    Math.random() * this.world.width,
-                    Math.random() * this.world.height,
-                ])));
             }
         }
         update(time) {

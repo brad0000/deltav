@@ -41,6 +41,11 @@ var deltav;
                 new Box(cy, this.south, this.east, cx),
             ];
         }
+        scale(sx, sy) {
+            let cx = this.west + this.width / 2;
+            let cy = this.north + this.height / 2;
+            return new Box(cy - this.height / 2 * sy, cy + this.height / 2 * sy, cx + this.width / 2 * sx, cx - this.width / 2 * sx);
+        }
         clamp(box) {
             if (this.west < box.west) {
                 this.west = box.west;

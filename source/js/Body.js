@@ -17,8 +17,8 @@ var deltav;
         }
         getX() { return this.position.e(1); }
         getY() { return this.position.e(2); }
-        getP() { return this.position.dup(); }
-        getV() { return this.velocity.dup(); }
+        getP() { return this.position; }
+        getV() { return this.velocity; }
         getH() { return this.heading; }
         getR() { return this.radius; }
         getCollisionBox() {
@@ -36,6 +36,7 @@ var deltav;
             this.position = this.position.add(this.velocity.multiply(time));
             this.velocity = this.velocity.add(this.acceleration.multiply(time));
             this.boundingBox = null;
+            return !this.velocity.eql([0, 0]);
         }
         render(ctx) {
             ctx.fillStyle = this.brush;

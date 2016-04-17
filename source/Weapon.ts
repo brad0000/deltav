@@ -116,7 +116,7 @@ namespace deltav {
         }
 
         public update(time: number, world: World, input: Input) {
-            super.update(time, world, input);
+            return super.update(time, world, input);
         }
 
         public render(ctx: CanvasRenderingContext2D) {

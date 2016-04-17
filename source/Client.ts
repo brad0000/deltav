@@ -10,6 +10,13 @@ namespace deltav {
         private logger: Logger;
         private input: IInput;
 
+        private lastLoopDuration: number = 0;
+        private lastUpdateDuration: number = 0;
+        private lastRenderDuration: number = 0;
+        
+        private lastUpdateTime: number = Date.now();
+        private lastTimeElapsed: number = 0;
+
         constructor(canvas: HTMLCanvasElement, logArea: HTMLTextAreaElement) {
 
             canvas.width  = window.innerWidth;
@@ -21,14 +28,25 @@ namespace deltav {
             this.input = new Input(canvas, document);
             this.ctx = canvas.getContext("2d");
 
-            this.startGameLoop();
+            requestAnimationFrame(() => this.gameLoop());
+            // setInterval(() => this.gameLoop(), 50);
         }
 
-        private startGameLoop() {
-            setInterval(() => {
-                this.updateWorld(0.033);
-                this.renderWorld();
-            }, 30);
+        private gameLoop() {
+            requestAnimationFrame(() => this.gameLoop());
+            
+            let now = Date.now();
+            this.lastTimeElapsed = now - this.lastUpdateTime; 
+            this.updateWorld(this.lastTimeElapsed / 1000); // (now - this.lastUpdateTime) / 1000);
+            this.lastUpdateDuration = Date.now() - now;
+            
+            this.lastUpdateTime = now;
+            
+            let renderStart = Date.now();
+            this.renderWorld();
+            this.lastRenderDuration = Date.now() - renderStart;
+            
+            this.lastLoopDuration = Date.now() - now;
         }
 
         private updateWorld(time: number) {
@@ -40,6 +58,14 @@ namespace deltav {
 
         private renderWorld() {
             this.view.render(this.ctx);
+            
+            this.ctx.strokeStyle = "white";
+            this.ctx.strokeText("last elapsed: " + this.lastTimeElapsed, 20, 20);
+            this.ctx.strokeText("last loop: " + this.lastLoopDuration, 20, 40);
+            this.ctx.strokeText("last update: " + this.lastUpdateDuration, 20, 60);
+            this.ctx.strokeText("last render: " + this.lastRenderDuration, 20, 80);
+            this.ctx.stroke();
+
         }
     }
     

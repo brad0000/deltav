@@ -7,31 +7,38 @@ var deltav;
             this.width = width;
             this.height = height;
             this.drag = -0.9;
-            this.staticBodies = new Array();
-            this.dynamicBodies = new Array();
             this.gcCountdown = 10;
-            this.starTree = new deltav.RTree(this);
+            this.staticBodyList = new Array();
+            this.dynamicBodyList = new Array();
+            this.staticBodyTree = new deltav.RTree(this);
+            this.dynamicBodyTree = new deltav.RTree(this);
             this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 4]));
             this.addDynamicBody(this.player);
             this.loader = new WorldLoader(logger, this);
         }
         addStaticBody(body) {
-            this.staticBodies.push(body);
+            body.tag = this.staticBodyList.length;
+            this.staticBodyList[body.tag] = body;
+            this.staticBodyTree.add(body);
         }
         addDynamicBody(body) {
-            this.dynamicBodies.push(body);
+            body.tag = this.dynamicBodyList.length;
+            this.dynamicBodyList[body.tag] = body;
+            this.dynamicBodyTree.add(body);
         }
         update(time, input) {
             this.gcCountdown -= time;
             this.loader.update(time);
             let skipHashset = {};
             let a, b;
-            for (let i = 0; i < this.dynamicBodies.length; i++) {
-                a = this.dynamicBodies[i];
-                for (let j = 0; j < this.dynamicBodies.length; j++) {
-                    if (i !== j || skipHashset[i + "," + j] === true) {
-                        skipHashset[j + "," + i] = true;
-                        b = this.dynamicBodies[j];
+            let nearbyBodies;
+            for (let i = 0; i < this.dynamicBodyList.length; i++) {
+                a = this.dynamicBodyList[i];
+                nearbyBodies = this.dynamicBodyTree.search(a.getBoundingBox().scale(10, 10));
+                for (let j = 0; j < nearbyBodies.length; j++) {
+                    b = nearbyBodies[j];
+                    if (a.tag !== b.tag && !skipHashset[a.tag + "," + b.tag]) {
+                        skipHashset[b.tag + "," + a.tag] = true;
                         if (this.intersect(a, b)) {
                             this.handleCollision(a, b);
                         }
@@ -39,24 +46,24 @@ var deltav;
                 }
             }
             if (this.gcCountdown < 0) {
-                this.updateBodiesWithGC(this.staticBodies, time, input);
-                this.updateBodiesWithGC(this.dynamicBodies, time, input);
+                this.updateBodiesWithGC(this.dynamicBodyList, this.dynamicBodyTree, time, input);
+                this.updateBodiesWithGC(this.staticBodyList, this.staticBodyTree, time, input);
+                this.gcCountdown = 10;
             }
             else {
-                this.updateBodies(this.staticBodies, time, input);
-                this.updateBodies(this.dynamicBodies, time, input);
+                this.updateBodies(this.dynamicBodyList, this.dynamicBodyTree, time, input);
+                this.updateBodies(this.staticBodyList, this.staticBodyTree, time, input);
             }
         }
         render(ctx, clip) {
-            this.renderBodies(this.starTree.search(clip), ctx, null);
-            this.renderBodies(this.staticBodies, ctx, clip);
-            this.renderBodies(this.dynamicBodies, ctx, clip);
+            this.renderBodies(this.staticBodyTree.search(clip), ctx, null);
+            this.renderBodies(this.dynamicBodyTree.search(clip), ctx, null);
         }
         getPlayerPosition() {
             return this.player.getP();
         }
         addStar(star) {
-            this.starTree.add(star);
+            this.staticBodyTree.add(star);
         }
         handleCollision(a, b) {
             let isADead = a.collide(b);
@@ -101,20 +108,32 @@ var deltav;
                 return false;
             }
         }
-        updateBodiesWithGC(bodies, time, input) {
-            let old = bodies;
-            bodies = [];
-            for (let i = 0; i < old.length; i++) {
-                if (!old[i].isDead) {
-                    old[i].update(time, this, input);
-                    bodies.push(old[i]);
+        updateBodiesWithGC(bodies, bodyTree, time, input) {
+            let body;
+            for (let i = 0; i < bodies.length; i++) {
+                body = bodies[i];
+                if (body.isDead) {
+                    bodies.splice(i, 1);
+                    bodyTree.remove(body);
+                    i--;
+                }
+                else {
+                    if (body.update(time, this, input)) {
+                        bodyTree.remove(body);
+                        bodyTree.add(body);
+                    }
                 }
             }
         }
-        updateBodies(bodies, time, input) {
+        updateBodies(bodies, bodyTree, time, input) {
+            let body;
             for (let i = 0; i < bodies.length; i++) {
-                if (!bodies[i].isDead) {
-                    bodies[i].update(time, this, input);
+                body = bodies[i];
+                if (!body.isDead) {
+                    if (body.update(time, this, input)) {
+                        bodyTree.remove(body);
+                        bodyTree.add(body);
+                    }
                 }
             }
         }
@@ -154,12 +173,6 @@ var deltav;
                     Math.random() * this.world.width,
                     Math.random() * this.world.height,
                 ]), Math.random() * 30));
-            }
-            for (let i = 0; i < 100; i++) {
-                this.world.addDynamicBody(new deltav.Drone(this.logger, Vector.create([
-                    Math.random() * this.world.width,
-                    Math.random() * this.world.height,
-                ])));
             }
         }
         update(time) {

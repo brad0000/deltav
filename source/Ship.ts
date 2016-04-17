@@ -2,14 +2,14 @@ namespace deltav {
     export class Ship extends Body {
 
         protected power = 20000;
-        protected angularPower = 40;
+        protected angularPower = 20000;
         protected gattlingGun: GattlingGun;
         protected canon: Canon;
 
         constructor(logger: Logger, position: Vector) {
             super(logger, position);
 
-            this.mass = 20;
+            this.mass = 10;
 
             this.gattlingGun = new GattlingGun(this);
             this.canon = new Canon(this);
@@ -40,8 +40,8 @@ namespace deltav {
             this.setGeometry(geo);
         }
 
-        public update(time: number, world: World, input: IInput) {
-            super.update(time, world, input);
+        public update(time: number, world: World, input: IInput): boolean {
+            let moved = super.update(time, world, input);
 
             let speed = this.velocity.modulus();
             if (speed > 1) {
@@ -59,31 +59,23 @@ namespace deltav {
 
             // calc net forces
             let force = Vector.Zero(2);
-            // if (input.isDown(CtlKey.Up)) {
-            //     force = force.add(Vector.create([0, -this.power]));
-            // } else if (input.isDown(CtlKey.Down)) {
-            //     force = force.add(Vector.create([0, this.power]));
-            // }
-            // if (input.isDown(CtlKey.Left)) {
-            //     force = force.add(Vector.create([-this.power, 0]));
-            // } else if (input.isDown(CtlKey.Right)) {
-            //     force = force.add(Vector.create([this.power, 0]));
-            // }
+            let directionVector = Vector.create([1, 0]).rotate(this.heading, Vector.Zero(2));
 
             if (input.isDown(CtlKey.Accelerate)) {
-                if (this.velocity.eql(Vector.Zero(2))) {
-                    // Allow user to accelerate from standing stop.
-                    this.velocity.setElements([0, -0.1]);
-                }
-                force = force.add(this.velocity.toUnitVector().multiply(this.power));
+                
+                let throttle = input.rate(CtlKey.Accelerate);
+                force = force.add(directionVector.multiply(throttle * this.power));
 
                 let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
                 world.addStaticBody(
                     new Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
 
             } else if (input.isDown(CtlKey.Brake)) {
-                force = force.add(this.velocity.rotate(Math.PI, Vector.Zero(2)).toUnitVector().multiply(this.power));
+                let brake = input.rate(CtlKey.Brake);
+                force = force.add(directionVector.multiply(-1).multiply(brake * this.power));
             }
+            
+            // newton
             this.acceleration = force.divide(this.mass).multiply(time);
 
             // change heading
@@ -91,11 +83,15 @@ namespace deltav {
             let veerLeft = input.isDown(CtlKey.AntiClockwise);
             let rotation: Vector = null;
             if (veerRight || veerLeft) {
+                
+                let rate = input.rate(veerLeft ? CtlKey.AntiClockwise : CtlKey.Clockwise);
+                
                 rotation = this.velocity
                     .rotate(Math.PI / 2 * (veerRight ? 1 : -1), Vector.Zero(2))
                     .toUnitVector()
-                    .multiply(this.scaleAngularPower(speed))
+                    .multiply(this.angularPower * rate)
                     .multiply(time);
+                    
                 this.acceleration = this.acceleration.add(rotation);
 
                 // let rad = Math.PI / 2 * (veerRight ? -1 : 1);
@@ -103,6 +99,8 @@ namespace deltav {
                 // world.bodies.push(
                 //     new Smoke(this, exhaust.e(1), exhaust.e(2), this.velocity.rotate(rad, this.velocity)));
             }
+            
+            return moved;
         }
 
         public report(): string {
@@ -137,9 +135,9 @@ namespace deltav {
                 || this.canon.recentlyFired(bullet);
         }
 
-        private scaleAngularPower(speed: number): number {
-            return this.angularPower * speed;
-        }
+        // private scaleAngularPower(speed: number): number {
+        //     return this.angularPower * speed;
+        // }
 
         private fh(rad: number): string {
             let deg = rad * 180 / Math.PI;

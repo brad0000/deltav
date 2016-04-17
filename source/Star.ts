@@ -5,8 +5,8 @@ namespace deltav {
             this.radius = radius;
         }
 
-        public update(time: number, world: World, input: Input) {
-            // nada
+        public update(time: number, world: World, input: Input): boolean {
+            return false;
         }
 
         public render(ctx: CanvasRenderingContext2D) {
