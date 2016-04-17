@@ -1848,9 +1848,9 @@ var deltav;
                 Vector.create([-5, 2.5]),
             ];
             for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.5);
+                geo[i] = geo[i].multiply(0.3);
             }
-            return new Bullet(this.logger, this, barrel, velocity, "orange", geo);
+            return new Bullet(this.logger, this, barrel, velocity, "silver", geo);
         }
         fire(world, position, velocity) {
             super.fire(world, position, velocity);
@@ -1912,7 +1912,6 @@ var deltav;
             this.gattlingGun = new deltav.GattlingGun(this);
             this.canon = new deltav.Canon(this);
             this.brush = "red";
-            this.img = document.images.namedItem("hornet");
             this.velocity = Vector.create([0, 1]);
             let geo = [
                 Vector.create([-2, -3]),
@@ -1987,7 +1986,7 @@ var deltav;
             else {
                 ctx.translate(this.getX(), this.getY());
                 ctx.rotate(this.heading);
-                ctx.drawImage(this.img, -this.radius, -this.radius, this.radius * 2, this.radius * 2);
+                ctx.drawImage(this.img, -this.radius, -this.radius / 2, this.radius * 2, this.radius);
                 ctx.rotate(-this.heading);
                 ctx.translate(-this.getX(), -this.getY());
             }
@@ -2011,6 +2010,26 @@ var deltav;
         }
     }
     deltav.Ship = Ship;
+    class Hornet extends Ship {
+        constructor(logger, position) {
+            super(logger, position);
+            this.img = document.images.namedItem("hornet");
+            this.mass = 10;
+            this.radius = 30;
+        }
+    }
+    deltav.Hornet = Hornet;
+    class Constellation extends Ship {
+        constructor(logger, position) {
+            super(logger, position);
+            this.img = document.images.namedItem("constellation");
+            this.mass = 38;
+            this.radius = 85;
+            this.power = 50000;
+            this.angularPower = 10000;
+        }
+    }
+    deltav.Constellation = Constellation;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=Ship.js.map
@@ -2251,7 +2270,7 @@ var deltav;
             this.dynamicBodyList = new Array();
             this.staticBodyTree = new deltav.RTree(this);
             this.dynamicBodyTree = new deltav.RTree(this);
-            this.player = new deltav.Ship(this.logger, Vector.create([this.width / 2, this.height / 2]));
+            this.player = new deltav.Constellation(this.logger, Vector.create([this.width / 2, this.height / 2]));
             this.addDynamicBody(this.player);
             this.loader = new WorldLoader(logger, this);
         }

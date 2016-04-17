@@ -51,7 +51,7 @@ namespace deltav {
             ];
 
             for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.5);
+                geo[i] = geo[i].multiply(0.3);
             }
 
             return new Bullet(
@@ -59,7 +59,7 @@ namespace deltav {
                 this,
                 barrel,
                 velocity,
-                "orange",
+                "silver",
                 geo);
         }
 

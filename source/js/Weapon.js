@@ -46,9 +46,9 @@ var deltav;
                 Vector.create([-5, 2.5]),
             ];
             for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.5);
+                geo[i] = geo[i].multiply(0.3);
             }
-            return new Bullet(this.logger, this, barrel, velocity, "orange", geo);
+            return new Bullet(this.logger, this, barrel, velocity, "silver", geo);
         }
         fire(world, position, velocity) {
             super.fire(world, position, velocity);

@@ -1,4 +1,5 @@
 namespace deltav {
+    
     export class Ship extends Body {
 
         protected power = 20000;
@@ -18,8 +19,6 @@ namespace deltav {
             this.canon = new Canon(this);
 
             this.brush = "red";
-
-            this.img = <HTMLImageElement>document.images.namedItem("hornet");
 
             this.velocity = Vector.create([0, 1]);
 
@@ -127,7 +126,7 @@ namespace deltav {
                 
                 ctx.translate(this.getX(), this.getY());
                 ctx.rotate(this.heading);
-                ctx.drawImage(this.img, -this.radius, -this.radius, this.radius * 2, this.radius * 2);
+                ctx.drawImage(this.img, -this.radius, -this.radius / 2, this.radius * 2, this.radius);
                 ctx.rotate(-this.heading);
                 ctx.translate(-this.getX(), -this.getY());
                 
@@ -169,4 +168,29 @@ namespace deltav {
             return e[0].toFixed(dp) + ", " + e[1].toFixed(dp);
         }
     }
+    
+        export class Hornet extends Ship {
+        constructor(logger: Logger, position: Vector) {
+            super(logger, position);
+
+                this.img = <HTMLImageElement>document.images.namedItem("hornet");
+                this.mass = 10;
+                this.radius = 30;
+            
+        }
+    }
+    
+    export class Constellation extends Ship {
+        constructor(logger: Logger, position: Vector) {
+            super(logger, position);
+
+                this.img = <HTMLImageElement>document.images.namedItem("constellation");
+                this.mass = 38;
+                this.radius = 85;
+                this.power = 50000;
+                this.angularPower = 10000;
+            
+        }
+    }
+
 }
