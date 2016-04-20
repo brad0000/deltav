@@ -9,8 +9,8 @@ var deltav;
         CtlKey[CtlKey["Brake"] = 40] = "Brake";
         CtlKey[CtlKey["Clockwise"] = 39] = "Clockwise";
         CtlKey[CtlKey["AntiClockwise"] = 37] = "AntiClockwise";
-        CtlKey[CtlKey["FirePrimary"] = 17] = "FirePrimary";
-        CtlKey[CtlKey["FireSecondary"] = 32] = "FireSecondary";
+        CtlKey[CtlKey["WeaponGroup1"] = 17] = "WeaponGroup1";
+        CtlKey[CtlKey["WeaponGroup2"] = 32] = "WeaponGroup2";
     })(deltav.CtlKey || (deltav.CtlKey = {}));
     var CtlKey = deltav.CtlKey;
     class Input {
@@ -51,8 +51,8 @@ var deltav;
         }
         gamepadIsKeyDown(gamepad, key) {
             switch (key) {
-                case CtlKey.FirePrimary: return gamepad.buttons[0].pressed;
-                case CtlKey.FireSecondary: return gamepad.buttons[1].pressed;
+                case CtlKey.WeaponGroup1: return gamepad.buttons[0].pressed;
+                case CtlKey.WeaponGroup2: return gamepad.buttons[1].pressed;
                 case CtlKey.Accelerate: return this.gamepadRate(gamepad, key) > 0.1;
                 case CtlKey.Brake: return this.gamepadRate(gamepad, key) > 0.1;
                 case CtlKey.AntiClockwise: return this.gamepadRate(gamepad, key) > 0.2;

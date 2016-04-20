@@ -4,9 +4,9 @@ namespace deltav {
 
         protected power = 20000;
         protected angularPower = 20000;
-        protected gattlingGun: GattlingGun;
-        protected canon: Canon;
-
+        protected weaponGroups: WeaponGroup[];
+        protected engines: Engine[];
+        
         protected img: HTMLImageElement;
 
         constructor(logger: Logger, position: Vector) {
@@ -14,9 +14,6 @@ namespace deltav {
 
             this.mass = 10;
             this.radius = 50;
-
-            this.gattlingGun = new GattlingGun(this);
-            this.canon = new Canon(this);
 
             this.brush = "red";
 
@@ -52,13 +49,16 @@ namespace deltav {
                 this.heading = this.velocity.toAngle();
             }
 
-            this.gattlingGun.update(time);
-            this.canon.update(time);
-            if (input.isDown(CtlKey.FirePrimary) && this.gattlingGun.ready()) {
-                this.gattlingGun.fire(world, this.position, this.velocity);
+            for (let i = 0; i < this.weaponGroups.length; i++) {
+                this.weaponGroups[i].update(time);
             }
-            if (input.isDown(CtlKey.FireSecondary) && this.canon.ready()) {
-                this.canon.fire(world, this.position, this.velocity);
+
+            if (input.isDown(CtlKey.WeaponGroup1) && this.weaponGroups[0].ready()) {
+                this.weaponGroups[0].fire(world, this.position, this.velocity);
+            }
+            
+            if (input.isDown(CtlKey.WeaponGroup2) && this.weaponGroups[1].ready()) {
+                this.weaponGroups[1].fire(world, this.position, this.velocity);
             }
 
             // calc net forces
@@ -70,9 +70,9 @@ namespace deltav {
                 let throttle = input.rate(CtlKey.Accelerate);
                 force = force.add(directionVector.multiply(throttle * this.power));
 
-                let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
-                world.addStaticBody(
-                    new Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
+                for (let i = 0; i < this.engines.length; i++) {
+                    this.engines[i].update(world);
+                }
 
             } else if (input.isDown(CtlKey.Brake)) {
                 let brake = input.rate(CtlKey.Brake);
@@ -150,8 +150,12 @@ namespace deltav {
         }
 
         public recentlyFired(bullet: Bullet): boolean {
-            return this.gattlingGun.recentlyFired(bullet)
-                || this.canon.recentlyFired(bullet);
+            for (let i = 0; i < this.weaponGroups.length; i++) {
+                if (this.weaponGroups[i].recentlyFired(bullet)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // private scaleAngularPower(speed: number): number {
@@ -177,6 +181,14 @@ namespace deltav {
                 this.mass = 10;
                 this.radius = 30;
             
+                this.weaponGroups = [
+                    new WeaponGroup(this.logger, this, [ new GattlingGun(this, Vector.create([this.radius, 0])) ]),
+                    new WeaponGroup(this.logger, this, [ new Canon(this, Vector.create([this.radius, 0])) ]),
+                ];
+                
+                this.engines = [
+                    new Engine(this.logger, this, Vector.create([-this.radius + 5, 0])),  
+                ];
         }
     }
     
@@ -189,7 +201,33 @@ namespace deltav {
                 this.radius = 85;
                 this.power = 50000;
                 this.angularPower = 10000;
+
+                this.weaponGroups = [
+                    new WeaponGroup(this.logger, this, [ 
+                        new GattlingGun(this, Vector.create([0, -20])),
+                        new GattlingGun(this, Vector.create([0, 20])),
+                    ]),
+                    new WeaponGroup(this.logger, this, [ new Canon(this, Vector.create([this.radius, 0])) ]),
+                ];
+
+                this.engines = [
+                    new Engine(this.logger, this, Vector.create([-this.radius + 5, 20])),  
+                    new Engine(this.logger, this, Vector.create([-this.radius + 5, -20])),
+                ];
+        }
+    }
+    
+    export class Engine {
+        constructor(private logger: Logger, private ship: Ship, private position: Vector) {
             
+        }
+        
+        public update(world: World) {
+            
+            let shipPosition = this.ship.getP();
+            let exhaust = shipPosition.add(this.position).rotate(this.ship.getH(), shipPosition);
+            
+            world.addStaticBody(new Smoke(this.logger, exhaust, Vector.Zero(2), 1));
         }
     }
 

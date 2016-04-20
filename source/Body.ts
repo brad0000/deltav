@@ -69,8 +69,6 @@ namespace deltav {
 
         public render(ctx: CanvasRenderingContext2D) {
             ctx.fillStyle = this.brush;
-            ctx.strokeStyle = this.brush;
-
             ctx.beginPath();
 
             let v = this.position.add(this.geometry[0]).rotate(this.heading, this.position);

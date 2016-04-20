@@ -6,7 +6,7 @@ namespace deltav {
 
             this.brush = "gray";
 
-            // radom velocities
+            // random velocities
             this.velocity.setElements([Math.random() * 7 - 3.5, Math.random() * 7 - 3.5]);
             this.rotationSpeed = Math.random() * 0.001 - 0.0005;
 

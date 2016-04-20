@@ -7,8 +7,6 @@ var deltav;
             this.angularPower = 20000;
             this.mass = 10;
             this.radius = 50;
-            this.gattlingGun = new deltav.GattlingGun(this);
-            this.canon = new deltav.Canon(this);
             this.brush = "red";
             this.velocity = Vector.create([0, 1]);
             let geo = [
@@ -36,21 +34,23 @@ var deltav;
             if (speed > 1) {
                 this.heading = this.velocity.toAngle();
             }
-            this.gattlingGun.update(time);
-            this.canon.update(time);
-            if (input.isDown(deltav.CtlKey.FirePrimary) && this.gattlingGun.ready()) {
-                this.gattlingGun.fire(world, this.position, this.velocity);
+            for (let i = 0; i < this.weaponGroups.length; i++) {
+                this.weaponGroups[i].update(time);
             }
-            if (input.isDown(deltav.CtlKey.FireSecondary) && this.canon.ready()) {
-                this.canon.fire(world, this.position, this.velocity);
+            if (input.isDown(deltav.CtlKey.WeaponGroup1) && this.weaponGroups[0].ready()) {
+                this.weaponGroups[0].fire(world, this.position, this.velocity);
+            }
+            if (input.isDown(deltav.CtlKey.WeaponGroup2) && this.weaponGroups[1].ready()) {
+                this.weaponGroups[1].fire(world, this.position, this.velocity);
             }
             let force = Vector.Zero(2);
             let directionVector = Vector.create([1, 0]).rotate(this.heading, Vector.Zero(2));
             if (input.isDown(deltav.CtlKey.Accelerate)) {
                 let throttle = input.rate(deltav.CtlKey.Accelerate);
                 force = force.add(directionVector.multiply(throttle * this.power));
-                let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
-                world.addStaticBody(new deltav.Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
+                for (let i = 0; i < this.engines.length; i++) {
+                    this.engines[i].update(world);
+                }
             }
             else if (input.isDown(deltav.CtlKey.Brake)) {
                 let brake = input.rate(deltav.CtlKey.Brake);
@@ -95,8 +95,12 @@ var deltav;
             ctx.fill();
         }
         recentlyFired(bullet) {
-            return this.gattlingGun.recentlyFired(bullet)
-                || this.canon.recentlyFired(bullet);
+            for (let i = 0; i < this.weaponGroups.length; i++) {
+                if (this.weaponGroups[i].recentlyFired(bullet)) {
+                    return true;
+                }
+            }
+            return false;
         }
         fh(rad) {
             let deg = rad * 180 / Math.PI;
@@ -114,6 +118,13 @@ var deltav;
             this.img = document.images.namedItem("hornet");
             this.mass = 10;
             this.radius = 30;
+            this.weaponGroups = [
+                new deltav.WeaponGroup(this.logger, this, [new deltav.GattlingGun(this, Vector.create([this.radius, 0]))]),
+                new deltav.WeaponGroup(this.logger, this, [new deltav.Canon(this, Vector.create([this.radius, 0]))]),
+            ];
+            this.engines = [
+                new Engine(this.logger, this, Vector.create([-this.radius + 5, 0])),
+            ];
         }
     }
     deltav.Hornet = Hornet;
@@ -125,9 +136,33 @@ var deltav;
             this.radius = 85;
             this.power = 50000;
             this.angularPower = 10000;
+            this.weaponGroups = [
+                new deltav.WeaponGroup(this.logger, this, [
+                    new deltav.GattlingGun(this, Vector.create([0, -20])),
+                    new deltav.GattlingGun(this, Vector.create([0, 20])),
+                ]),
+                new deltav.WeaponGroup(this.logger, this, [new deltav.Canon(this, Vector.create([this.radius, 0]))]),
+            ];
+            this.engines = [
+                new Engine(this.logger, this, Vector.create([-this.radius + 5, 20])),
+                new Engine(this.logger, this, Vector.create([-this.radius + 5, -20])),
+            ];
         }
     }
     deltav.Constellation = Constellation;
+    class Engine {
+        constructor(logger, ship, position) {
+            this.logger = logger;
+            this.ship = ship;
+            this.position = position;
+        }
+        update(world) {
+            let shipPosition = this.ship.getP();
+            let exhaust = shipPosition.add(this.position).rotate(this.ship.getH(), shipPosition);
+            world.addStaticBody(new deltav.Smoke(this.logger, exhaust, Vector.Zero(2), 1));
+        }
+    }
+    deltav.Engine = Engine;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=Ship.js.map

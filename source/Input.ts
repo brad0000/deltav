@@ -16,8 +16,8 @@ namespace deltav {
         Brake = 40,
         Clockwise = 39,
         AntiClockwise = 37,
-        FirePrimary = 17,
-        FireSecondary = 32,
+        WeaponGroup1 = 17,
+        WeaponGroup2 = 32,
     }
     /*
      * http://www.cambiaresearch.com/articles/15/javascript-key-codes
@@ -68,8 +68,8 @@ namespace deltav {
 
         private gamepadIsKeyDown(gamepad: Gamepad, key: CtlKey): boolean {
             switch (key) {
-                case CtlKey.FirePrimary: return gamepad.buttons[0].pressed;
-                case CtlKey.FireSecondary: return gamepad.buttons[1].pressed;
+                case CtlKey.WeaponGroup1: return gamepad.buttons[0].pressed;
+                case CtlKey.WeaponGroup2: return gamepad.buttons[1].pressed;
                 case CtlKey.Accelerate: return this.gamepadRate(gamepad, key) > 0.1;
                 case CtlKey.Brake: return this.gamepadRate(gamepad, key) > 0.1;
                 case CtlKey.AntiClockwise: return this.gamepadRate(gamepad, key) > 0.2;

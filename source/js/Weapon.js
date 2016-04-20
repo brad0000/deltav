@@ -1,8 +1,9 @@
 var deltav;
 (function (deltav) {
     class Weapon {
-        constructor(ship, caliber, velocity, reloadTime) {
+        constructor(ship, position, caliber, velocity, reloadTime) {
             this.ship = ship;
+            this.position = position;
             this.caliber = caliber;
             this.velocity = velocity;
             this.reloadTime = reloadTime;
@@ -18,14 +19,15 @@ var deltav;
                 this.countdown = 0;
             }
         }
-        fire(world, position, velocity) {
-            let barrel = position.add(velocity.toUnitVector().multiply(20));
+        fire(world) {
+            let shipP = this.ship.getP();
             let shipV = this.ship.getV();
+            let muzzle = shipP.add(this.position).rotate(this.ship.getH(), shipP);
             let bulletV = shipV.add(shipV.toUnitVector().multiply(this.velocity));
-            world.addDynamicBody(this.makeBullet(barrel, bulletV));
+            world.addDynamicBody(this.makeBullet(muzzle, bulletV));
             this.countdown = this.reloadTime;
         }
-        makeBullet(barrel, velocity) {
+        makeBullet(muzzle, velocity) {
             return null;
         }
         recentlyFired(bullet) {
@@ -34,42 +36,38 @@ var deltav;
     }
     deltav.Weapon = Weapon;
     class GattlingGun extends Weapon {
-        constructor(ship) {
-            super(ship, 1, 200, 0.2);
+        constructor(ship, position) {
+            super(ship, position, 1, 400, 0.2);
         }
-        makeBullet(barrel, velocity) {
+        makeBullet(muzzle, velocity) {
             let geo = [
-                Vector.create([-5, -2.5]),
-                Vector.create([4, -2.5]),
-                Vector.create([6.25, 0]),
-                Vector.create([4, 2.5]),
-                Vector.create([-5, 2.5]),
+                Vector.create([-10, -0.75]),
+                Vector.create([10, -0.75]),
+                Vector.create([10, 0.75]),
+                Vector.create([-10, 0.75]),
             ];
-            for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.3);
-            }
-            return new Bullet(this.logger, this, barrel, velocity, "silver", geo);
+            return new Bullet(this.logger, this, muzzle, velocity, "OrangeRed", geo);
         }
-        fire(world, position, velocity) {
-            super.fire(world, position, velocity);
+        fire(world) {
+            super.fire(world);
         }
     }
     deltav.GattlingGun = GattlingGun;
     class Canon extends Weapon {
-        constructor(ship) {
-            super(ship, 10, 100, 1);
+        constructor(ship, position) {
+            super(ship, position, 10, 200, 1);
         }
-        makeBullet(barrel, velocity) {
+        makeBullet(muzzle, velocity) {
             let geo = new Array();
             for (let i = 0; i < 10; i++) {
                 geo.push(Vector.create([1, 0])
                     .rotate(Math.PI * 2 / 5 * i, Vector.Zero(2))
                     .multiply(5));
             }
-            return new Bullet(this.logger, this, barrel, velocity, "#444461", geo);
+            return new Bullet(this.logger, this, muzzle, velocity, "#444461", geo);
         }
-        fire(world, position, velocity) {
-            super.fire(world, position, velocity);
+        fire(world) {
+            super.fire(world);
         }
     }
     deltav.Canon = Canon;
@@ -94,6 +92,40 @@ var deltav;
         }
     }
     deltav.Bullet = Bullet;
+    class WeaponGroup {
+        constructor(logger, ship, weapons) {
+            this.logger = logger;
+            this.ship = ship;
+            this.weapons = weapons;
+        }
+        ready() {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (!this.weapons[i].ready()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        update(time) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                this.weapons[i].update(time);
+            }
+        }
+        fire(world, position, velocity) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                this.weapons[i].fire(world);
+            }
+        }
+        recentlyFired(bullet) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (this.weapons[i].recentlyFired(bullet)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    deltav.WeaponGroup = WeaponGroup;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=Weapon.js.map

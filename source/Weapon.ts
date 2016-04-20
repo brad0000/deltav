@@ -3,7 +3,12 @@ namespace deltav {
         protected logger: Logger;
         private countdown = 0;
 
-        constructor(protected ship: Ship, public caliber: number, private velocity: number, private reloadTime: number) {
+        constructor(
+            protected ship: Ship, 
+            protected position: Vector,
+            public caliber: number, 
+            private velocity: number, 
+            private reloadTime: number) {
             this.logger = ship.logger;
         }
 
@@ -18,15 +23,18 @@ namespace deltav {
             }
         }
 
-        public fire(world: World, position: Vector, velocity: Vector) {
-            let barrel = position.add(velocity.toUnitVector().multiply(20));
+        public fire(world: World) {
+            let shipP = this.ship.getP();
             let shipV = this.ship.getV();
+            
+            let muzzle = shipP.add(this.position).rotate(this.ship.getH(), shipP);
             let bulletV = shipV.add(shipV.toUnitVector().multiply(this.velocity));
-            world.addDynamicBody(this.makeBullet(barrel, bulletV));
+            
+            world.addDynamicBody(this.makeBullet(muzzle, bulletV));
             this.countdown = this.reloadTime;
         }
 
-        protected makeBullet(barrel: Vector, velocity: Vector): Bullet {
+        protected makeBullet(muzzle: Vector, velocity: Vector): Bullet {
             // nothing
             return null;
         }
@@ -37,43 +45,38 @@ namespace deltav {
     }
 
     export class GattlingGun extends Weapon {
-        constructor(ship: Ship) {
-            super(ship, 1, 200, 0.2);
+        constructor(ship: Ship, position: Vector) {
+            super(ship, position, 1, 400, 0.2);
         }
 
-        public makeBullet(barrel: Vector, velocity: Vector) {
+        public makeBullet(muzzle: Vector, velocity: Vector) {
             let geo = [
-                Vector.create([-5, -2.5]),
-                Vector.create([4, -2.5]),
-                Vector.create([6.25, 0]),
-                Vector.create([4, 2.5]),
-                Vector.create([-5, 2.5]),
+                Vector.create([-10, -0.75]),
+                Vector.create([10, -0.75]),
+                Vector.create([10, 0.75]),
+                Vector.create([-10, 0.75]),
             ];
-
-            for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.3);
-            }
 
             return new Bullet(
                 this.logger,
                 this,
-                barrel,
+                muzzle,
                 velocity,
-                "silver",
+                "OrangeRed",
                 geo);
         }
 
-        public fire(world: World, position: Vector, velocity: Vector) {
-            super.fire(world, position, velocity);
+        public fire(world: World) {
+            super.fire(world);
         }
     }
 
     export class Canon extends Weapon {
-        constructor(ship: Ship) {
-            super(ship, 10, 100, 1);
+        constructor(ship: Ship, position: Vector) {
+            super(ship, position, 10, 200, 1);
         }
 
-        public makeBullet(barrel: Vector, velocity: Vector) {
+        public makeBullet(muzzle: Vector, velocity: Vector) {
 
             let geo = new Array<Vector>();
             for (let i = 0; i < 10; i++) {
@@ -86,14 +89,14 @@ namespace deltav {
             return new Bullet(
                 this.logger,
                 this,
-                barrel,
+                muzzle,
                 velocity,
                 "#444461",
                 geo);
         }
 
-        public fire(world: World, position: Vector, velocity: Vector) {
-            super.fire(world, position, velocity);
+        public fire(world: World) {
+            super.fire(world);
         }
     }
 
@@ -125,6 +128,42 @@ namespace deltav {
 
         public isFrom(weapon: Weapon) {
             return this.weapon === weapon;
+        }
+    }
+    
+    export class WeaponGroup {
+        constructor(private logger: Logger, private ship: Ship, private weapons: Weapon[]) {
+            // nothing
+        }
+
+        public ready(): boolean {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (!this.weapons[i].ready()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public update(time: number) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                this.weapons[i].update(time);
+            }
+        }
+
+        public fire(world: World, position: Vector, velocity: Vector) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                this.weapons[i].fire(world);
+            }
+        }
+        
+        public recentlyFired(bullet: Bullet): boolean {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (this.weapons[i].recentlyFired(bullet)) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 }

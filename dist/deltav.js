@@ -1521,7 +1521,6 @@ var deltav;
         }
         render(ctx) {
             ctx.fillStyle = this.brush;
-            ctx.strokeStyle = this.brush;
             ctx.beginPath();
             let v = this.position.add(this.geometry[0]).rotate(this.heading, this.position);
             ctx.moveTo(v.e(1), v.e(2));
@@ -1727,8 +1726,8 @@ var deltav;
         CtlKey[CtlKey["Brake"] = 40] = "Brake";
         CtlKey[CtlKey["Clockwise"] = 39] = "Clockwise";
         CtlKey[CtlKey["AntiClockwise"] = 37] = "AntiClockwise";
-        CtlKey[CtlKey["FirePrimary"] = 17] = "FirePrimary";
-        CtlKey[CtlKey["FireSecondary"] = 32] = "FireSecondary";
+        CtlKey[CtlKey["WeaponGroup1"] = 17] = "WeaponGroup1";
+        CtlKey[CtlKey["WeaponGroup2"] = 32] = "WeaponGroup2";
     })(deltav.CtlKey || (deltav.CtlKey = {}));
     var CtlKey = deltav.CtlKey;
     class Input {
@@ -1769,8 +1768,8 @@ var deltav;
         }
         gamepadIsKeyDown(gamepad, key) {
             switch (key) {
-                case CtlKey.FirePrimary: return gamepad.buttons[0].pressed;
-                case CtlKey.FireSecondary: return gamepad.buttons[1].pressed;
+                case CtlKey.WeaponGroup1: return gamepad.buttons[0].pressed;
+                case CtlKey.WeaponGroup2: return gamepad.buttons[1].pressed;
                 case CtlKey.Accelerate: return this.gamepadRate(gamepad, key) > 0.1;
                 case CtlKey.Brake: return this.gamepadRate(gamepad, key) > 0.1;
                 case CtlKey.AntiClockwise: return this.gamepadRate(gamepad, key) > 0.2;
@@ -1803,8 +1802,9 @@ var deltav;
 var deltav;
 (function (deltav) {
     class Weapon {
-        constructor(ship, caliber, velocity, reloadTime) {
+        constructor(ship, position, caliber, velocity, reloadTime) {
             this.ship = ship;
+            this.position = position;
             this.caliber = caliber;
             this.velocity = velocity;
             this.reloadTime = reloadTime;
@@ -1820,14 +1820,15 @@ var deltav;
                 this.countdown = 0;
             }
         }
-        fire(world, position, velocity) {
-            let barrel = position.add(velocity.toUnitVector().multiply(20));
+        fire(world) {
+            let shipP = this.ship.getP();
             let shipV = this.ship.getV();
+            let muzzle = shipP.add(this.position).rotate(this.ship.getH(), shipP);
             let bulletV = shipV.add(shipV.toUnitVector().multiply(this.velocity));
-            world.addDynamicBody(this.makeBullet(barrel, bulletV));
+            world.addDynamicBody(this.makeBullet(muzzle, bulletV));
             this.countdown = this.reloadTime;
         }
-        makeBullet(barrel, velocity) {
+        makeBullet(muzzle, velocity) {
             return null;
         }
         recentlyFired(bullet) {
@@ -1836,42 +1837,38 @@ var deltav;
     }
     deltav.Weapon = Weapon;
     class GattlingGun extends Weapon {
-        constructor(ship) {
-            super(ship, 1, 200, 0.2);
+        constructor(ship, position) {
+            super(ship, position, 1, 400, 0.2);
         }
-        makeBullet(barrel, velocity) {
+        makeBullet(muzzle, velocity) {
             let geo = [
-                Vector.create([-5, -2.5]),
-                Vector.create([4, -2.5]),
-                Vector.create([6.25, 0]),
-                Vector.create([4, 2.5]),
-                Vector.create([-5, 2.5]),
+                Vector.create([-10, -0.75]),
+                Vector.create([10, -0.75]),
+                Vector.create([10, 0.75]),
+                Vector.create([-10, 0.75]),
             ];
-            for (let i = 0; i < geo.length; i++) {
-                geo[i] = geo[i].multiply(0.3);
-            }
-            return new Bullet(this.logger, this, barrel, velocity, "silver", geo);
+            return new Bullet(this.logger, this, muzzle, velocity, "OrangeRed", geo);
         }
-        fire(world, position, velocity) {
-            super.fire(world, position, velocity);
+        fire(world) {
+            super.fire(world);
         }
     }
     deltav.GattlingGun = GattlingGun;
     class Canon extends Weapon {
-        constructor(ship) {
-            super(ship, 10, 100, 1);
+        constructor(ship, position) {
+            super(ship, position, 10, 200, 1);
         }
-        makeBullet(barrel, velocity) {
+        makeBullet(muzzle, velocity) {
             let geo = new Array();
             for (let i = 0; i < 10; i++) {
                 geo.push(Vector.create([1, 0])
                     .rotate(Math.PI * 2 / 5 * i, Vector.Zero(2))
                     .multiply(5));
             }
-            return new Bullet(this.logger, this, barrel, velocity, "#444461", geo);
+            return new Bullet(this.logger, this, muzzle, velocity, "#444461", geo);
         }
-        fire(world, position, velocity) {
-            super.fire(world, position, velocity);
+        fire(world) {
+            super.fire(world);
         }
     }
     deltav.Canon = Canon;
@@ -1896,6 +1893,40 @@ var deltav;
         }
     }
     deltav.Bullet = Bullet;
+    class WeaponGroup {
+        constructor(logger, ship, weapons) {
+            this.logger = logger;
+            this.ship = ship;
+            this.weapons = weapons;
+        }
+        ready() {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (!this.weapons[i].ready()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        update(time) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                this.weapons[i].update(time);
+            }
+        }
+        fire(world, position, velocity) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                this.weapons[i].fire(world);
+            }
+        }
+        recentlyFired(bullet) {
+            for (let i = 0; i < this.weapons.length; i++) {
+                if (this.weapons[i].recentlyFired(bullet)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+    deltav.WeaponGroup = WeaponGroup;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=Weapon.js.map
@@ -1909,8 +1940,6 @@ var deltav;
             this.angularPower = 20000;
             this.mass = 10;
             this.radius = 50;
-            this.gattlingGun = new deltav.GattlingGun(this);
-            this.canon = new deltav.Canon(this);
             this.brush = "red";
             this.velocity = Vector.create([0, 1]);
             let geo = [
@@ -1938,21 +1967,23 @@ var deltav;
             if (speed > 1) {
                 this.heading = this.velocity.toAngle();
             }
-            this.gattlingGun.update(time);
-            this.canon.update(time);
-            if (input.isDown(deltav.CtlKey.FirePrimary) && this.gattlingGun.ready()) {
-                this.gattlingGun.fire(world, this.position, this.velocity);
+            for (let i = 0; i < this.weaponGroups.length; i++) {
+                this.weaponGroups[i].update(time);
             }
-            if (input.isDown(deltav.CtlKey.FireSecondary) && this.canon.ready()) {
-                this.canon.fire(world, this.position, this.velocity);
+            if (input.isDown(deltav.CtlKey.WeaponGroup1) && this.weaponGroups[0].ready()) {
+                this.weaponGroups[0].fire(world, this.position, this.velocity);
+            }
+            if (input.isDown(deltav.CtlKey.WeaponGroup2) && this.weaponGroups[1].ready()) {
+                this.weaponGroups[1].fire(world, this.position, this.velocity);
             }
             let force = Vector.Zero(2);
             let directionVector = Vector.create([1, 0]).rotate(this.heading, Vector.Zero(2));
             if (input.isDown(deltav.CtlKey.Accelerate)) {
                 let throttle = input.rate(deltav.CtlKey.Accelerate);
                 force = force.add(directionVector.multiply(throttle * this.power));
-                let exhaust = this.position.add(this.velocity.toUnitVector().multiply(-10));
-                world.addStaticBody(new deltav.Smoke(this.logger, exhaust, this.velocity.multiply(-1), 1));
+                for (let i = 0; i < this.engines.length; i++) {
+                    this.engines[i].update(world);
+                }
             }
             else if (input.isDown(deltav.CtlKey.Brake)) {
                 let brake = input.rate(deltav.CtlKey.Brake);
@@ -1997,8 +2028,12 @@ var deltav;
             ctx.fill();
         }
         recentlyFired(bullet) {
-            return this.gattlingGun.recentlyFired(bullet)
-                || this.canon.recentlyFired(bullet);
+            for (let i = 0; i < this.weaponGroups.length; i++) {
+                if (this.weaponGroups[i].recentlyFired(bullet)) {
+                    return true;
+                }
+            }
+            return false;
         }
         fh(rad) {
             let deg = rad * 180 / Math.PI;
@@ -2016,6 +2051,13 @@ var deltav;
             this.img = document.images.namedItem("hornet");
             this.mass = 10;
             this.radius = 30;
+            this.weaponGroups = [
+                new deltav.WeaponGroup(this.logger, this, [new deltav.GattlingGun(this, Vector.create([this.radius, 0]))]),
+                new deltav.WeaponGroup(this.logger, this, [new deltav.Canon(this, Vector.create([this.radius, 0]))]),
+            ];
+            this.engines = [
+                new Engine(this.logger, this, Vector.create([-this.radius + 5, 0])),
+            ];
         }
     }
     deltav.Hornet = Hornet;
@@ -2027,9 +2069,33 @@ var deltav;
             this.radius = 85;
             this.power = 50000;
             this.angularPower = 10000;
+            this.weaponGroups = [
+                new deltav.WeaponGroup(this.logger, this, [
+                    new deltav.GattlingGun(this, Vector.create([0, -20])),
+                    new deltav.GattlingGun(this, Vector.create([0, 20])),
+                ]),
+                new deltav.WeaponGroup(this.logger, this, [new deltav.Canon(this, Vector.create([this.radius, 0]))]),
+            ];
+            this.engines = [
+                new Engine(this.logger, this, Vector.create([-this.radius + 5, 20])),
+                new Engine(this.logger, this, Vector.create([-this.radius + 5, -20])),
+            ];
         }
     }
     deltav.Constellation = Constellation;
+    class Engine {
+        constructor(logger, ship, position) {
+            this.logger = logger;
+            this.ship = ship;
+            this.position = position;
+        }
+        update(world) {
+            let shipPosition = this.ship.getP();
+            let exhaust = shipPosition.add(this.position).rotate(this.ship.getH(), shipPosition);
+            world.addStaticBody(new deltav.Smoke(this.logger, exhaust, Vector.Zero(2), 1));
+        }
+    }
+    deltav.Engine = Engine;
 })(deltav || (deltav = {}));
 
 //# sourceMappingURL=Ship.js.map
