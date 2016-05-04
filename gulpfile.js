@@ -1,20 +1,12 @@
 var gulp        = require("gulp"),
     Config      = require('./gulpfile.config'),
-    //browserify  = require("browserify"),
     source      = require("vinyl-source-stream"),
-    //buffer      = require("vinyl-buffer"),
     concat      = require('gulp-concat'),
-    // rename      = require('gulp-rename'),
-    // uglify      = require("gulp-uglify"),
     tslint      = require("gulp-tslint"),
     tsc         = require("gulp-typescript"),
     sourcemaps  = require("gulp-sourcemaps"),
-    //runSequence = require("run-sequence"),
-    //mocha       = require("gulp-mocha"),
-    //istanbul    = require("gulp-istanbul"),
     tsProject   = tsc.createProject('tsconfig.json'),
     del         = require('del'),
-    //superstatic = require( 'superstatic' )
     browserSync = require('browser-sync')
     .create();
 
@@ -84,33 +76,7 @@ gulp.task("bundle", ['compile-ts'], function() {
             './source/js/world.js',
         ])
         .pipe(concat('deltav.js'))
-        //.pipe(gulp.dest(outputFolder))
-        //.pipe(rename('uglify.js'))
-        //.pipe(uglify())
         .pipe(gulp.dest(outputFolder));
-
-    // var libraryName = "deltav";
-    // var mainTsFilePath = "./source/js/app.js";
-    // var outputFileName = libraryName + ".js";
-
-    // var bundler = browserify({
-    //     debug: true,
-    //     standalone : libraryName
-    // });
-
-    // return bundler
-    //     .add('./source/js/app.js')
-    //     .add('./source/js/client.js')
-    //     .add('./source/js/input.js')
-    //     .add('./source/js/ship.js')
-    //     //.add('./source/sylvester.js')
-    //     .bundle()
-    //     .pipe(source(outputFileName))
-    //     //.pipe(buffer())
-    //     //.pipe(sourcemaps.init({ loadMaps: true }))
-    //     //.pipe(uglify())
-    //     //.pipe(sourcemaps.write('./'))
-    //     .pipe(gulp.dest(outputFolder));
 });
 
 gulp.task('default', ['lint', 'bundle']);
